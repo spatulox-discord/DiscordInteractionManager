@@ -683,7 +683,6 @@ export abstract class BaseInteractionManager {
             return {
                 ...base,
                 type: data.type! as CommandType.USER_CONTEXT_MENU | CommandType.MESSAGE_CONTEXT_MENU,
-                description: data.description || 'Context menu',
                 command_scope: 'guild',
                 id: data.id
             } as ContextMenuSpecificGuildCommand;
@@ -694,7 +693,6 @@ export abstract class BaseInteractionManager {
             return {
                 ...base,
                 type: data.type! as CommandType.USER_CONTEXT_MENU | CommandType.MESSAGE_CONTEXT_MENU,
-                description: data.description || 'Context menu',
                 command_scope: 'global',
                 id: data.id
             } as ContextMenuGlobalGuildCommand;
