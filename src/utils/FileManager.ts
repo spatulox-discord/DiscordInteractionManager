@@ -8,7 +8,7 @@ export class FileManager {
      * @param filePath Full path to the JSON file
      * @returns Parsed JSON object or false on failure
      */
-    static async readJsonFile(filePath: string): Promise<any | false> {
+    static async readJsonFile(filePath: string): Promise<unknown> {
         try {
             const data = await fs.readFile(filePath, 'utf8');
             return JSON.parse(data);
@@ -85,7 +85,7 @@ export class FileManager {
     static async writeJsonFile(
         directoryPath: string,
         filename: string,
-        data: any
+        data: unknown
     ): Promise<boolean> {
         // Skip if data is an Error array
         if (Array.isArray(data) && data.length === 1 && data[0] === 'Error') {

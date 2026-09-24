@@ -1,5 +1,11 @@
 import {REST} from '@discordjs/rest';
-import {RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult, Routes} from 'discord-api-types/v10';
+import {
+    RESTAPIPartialCurrentUserGuild,
+    RESTGetCurrentApplicationResult,
+    RESTPostAPIApplicationCommandsResult,
+    RESTPostAPIApplicationGuildCommandsResult,
+    Routes
+} from 'discord-api-types/v10';
 import {Log} from "../../utils/Log";
 import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
@@ -186,10 +192,10 @@ export abstract class BaseInteractionManager {
         if (printResult) console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
 
         try {
-            const rawCmds = await this.rest.get(endpoint) as any[];
-            const commands = rawCmds.filter(cmd => this.commandType.includes(cmd.type));
-
-            const commandList: Interaction[] = commands.map((cmd: OnlineInteractionConfig) => InteractionPayload.fromDiscord(cmd));
+            const rawCmds = await this.rest.get(endpoint) as OnlineInteractionConfig[];
+            const commandList: Interaction[] = rawCmds
+                .filter(cmd => this.commandType.includes(cmd.type))
+                .map(cmd => InteractionPayload.fromDiscord(cmd));
 
             if(printResult) {
                 console.log(`${commandList.length} ${this.folderPath}(s) found\n`);
@@ -455,8 +461,8 @@ export abstract class BaseInteractionManager {
                     const resp = await this.rest.post(
                         Routes.applicationGuildCommands(this.clientId, guildId),
                         { body: dataToSend }
-                    );
-                    newIds[guildId] = (resp as any).id;
+                    ) as RESTPostAPIApplicationGuildCommandsResult;
+                    newIds[guildId] = resp.id;
                 } catch (error) {
                     nb++;
                     console.error(`⚠️ Guild ${guildId}: ${(error as Error).message}`);
@@ -476,8 +482,8 @@ export abstract class BaseInteractionManager {
         else if(cmd.command_scope == "global") {
             // Global deployment
             try {
-                const resp = await this.rest.post(Routes.applicationCommands(this.clientId), { body: dataToSend });
-                cmd.id = (resp as any).id;
+                const resp = await this.rest.post(Routes.applicationCommands(this.clientId), { body: dataToSend }) as RESTPostAPIApplicationCommandsResult;
+                cmd.id = resp.id;
                 await this.saveInteraction(file, cmd);
                 return true
             } catch (error) {
