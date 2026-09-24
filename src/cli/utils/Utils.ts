@@ -20,19 +20,26 @@ export class Utils {
         return [...namesByValue].map(([value, name]) => [name, value]);
     }
 
+    // Own keys only, so "constructor" or "toString" are not permissions
+    static isPermissionName(name: string): boolean {
+        return Object.prototype.hasOwnProperty.call(PermissionFlagsBits, name);
+    }
+
+    /**
+     * @throws on an unknown name, which would otherwise restrict the command to administrators without warning
+     */
     static permissionsToBitfield(perms: string[] | undefined): string | undefined {
-        if (!perms || perms.length === 0) return undefined;
-        if(!Array.isArray(perms)){
-            throw new Error("Invalid default_permission_string : not an array");
+        if (perms !== undefined && !Array.isArray(perms)) {
+            throw new Error("Invalid default_member_permissions_string: not an array");
         }
+        if (!perms || perms.length === 0) return undefined;
+
         let bits = 0n;
         for (const name of perms) {
-            const value = (PermissionFlagsBits as Record<string, bigint>)[name];
-            if (!value) {
-                console.warn(`Unknow permission in default_member_permissions: ${name}`);
-                continue;
+            if (!this.isPermissionName(name)) {
+                throw new Error(`Unknown permission in default_member_permissions_string: ${name}`);
             }
-            bits |= value;
+            bits |= (PermissionFlagsBits as Record<string, bigint>)[name]!;
         }
 
         return bits.toString();

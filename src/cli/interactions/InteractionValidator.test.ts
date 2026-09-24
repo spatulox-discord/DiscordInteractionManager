@@ -56,6 +56,13 @@ describe("InteractionValidator.validate", () => {
         }
     });
 
+    it("rejects unknown permission names", () => {
+        for (const name of ["BanMember", "constructor"]) {
+            const data = {name: "a", type: 2, command_scope: "global", default_member_permissions_string: ["KickMembers", name]};
+            assert.throws(() => InteractionValidator.validate(data), /Unknown permission/, name);
+        }
+    });
+
     it("rejects invalid data", () => {
         assert.throws(() => InteractionValidator.validate(false));
         assert.throws(() => InteractionValidator.validate({type: 1, description: "x", command_scope: "global"}));

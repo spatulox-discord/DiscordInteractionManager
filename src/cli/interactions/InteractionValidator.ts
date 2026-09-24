@@ -1,5 +1,6 @@
 import {CommandType, Interaction} from "../type/InteractionType";
 import {DiscordRegex} from "../../utils/DiscordRegex";
+import {Utils} from "../utils/Utils";
 
 export class InteractionValidator {
     static validate(data: unknown): Interaction {
@@ -23,6 +24,10 @@ export class InteractionValidator {
         const permissions = cmd.default_member_permissions_string;
         if (permissions !== undefined && (!Array.isArray(permissions) || permissions.some(name => typeof name !== 'string'))) {
             throw new Error(`Expected 'default_member_permissions_string' string[], got ${JSON.stringify(permissions)}`);
+        }
+        const unknownPermission = permissions?.find(name => !Utils.isPermissionName(name));
+        if (unknownPermission !== undefined) {
+            throw new Error(`Unknown permission in 'default_member_permissions_string': ${JSON.stringify(unknownPermission)}`);
         }
 
         const bitfield = cmd.default_member_permissions;

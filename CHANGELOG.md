@@ -56,6 +56,7 @@ Date format : dd/mm/yyyy
     - dotenv no longer prints its advertising tip on every run
     - A local file with an invalid `default_member_permissions` (e.g. `"abc"`) emptied the whole listing : the file is now reported and skipped
     - Interactions saved from Discord with a permission unknown to `discord-api-types` (added recently by Discord) lost it once updated, and could become usable by everyone : their permission names are no longer saved, only the bitfield. The details show these permissions as `Unknown (<bit>)`
+    - An unknown permission name in `default_member_permissions_string` (e.g. a typo) was skipped with a warning, restricting the interaction to administrators when it was the only one, and names such as `constructor` crashed : the file is now reported
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 

@@ -13,6 +13,12 @@ describe("Utils.permissionsToBitfield", () => {
         const expected = (PermissionFlagsBits.KickMembers | PermissionFlagsBits.BanMembers).toString();
         assert.equal(Utils.permissionsToBitfield(["KickMembers", "BanMembers"]), expected);
     });
+
+    it("rejects unknown names instead of restricting the command to administrators", () => {
+        for (const name of ["BanMember", "constructor", "toString", "__proto__"]) {
+            assert.throws(() => Utils.permissionsToBitfield(["KickMembers", name]), /Unknown permission/, name);
+        }
+    });
 });
 
 describe("Utils.bitfieldToPermissions", () => {
