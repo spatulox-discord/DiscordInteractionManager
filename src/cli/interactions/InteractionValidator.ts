@@ -1,4 +1,10 @@
-import {CommandType, Interaction} from "../type/InteractionType";
+import {
+    CommandType,
+    DiscordOptionType,
+    Interaction,
+    InteractionContextType,
+    InteractionIntegrationType
+} from "../type/InteractionType";
 import {DiscordRegex} from "../../utils/DiscordRegex";
 import {Utils} from "../utils/Utils";
 
@@ -17,6 +23,7 @@ export class InteractionValidator {
             if (typeof cmd.description !== 'string') {
                 throw new Error(`Expected SlashCommand 'description' string, got ${typeof cmd.description}`);
             }
+            if (cmd.options !== undefined) this.validateOptions(cmd.options, 'options');
         } else if (cmd.type !== CommandType.USER_CONTEXT_MENU && cmd.type !== CommandType.MESSAGE_CONTEXT_MENU) {
             throw new Error(`Expected SlashCommand (1) or ContextMenuCommand (2|3), got type ${cmd.type}`);
         }
@@ -33,6 +40,12 @@ export class InteractionValidator {
         const bitfield = cmd.default_member_permissions;
         if (bitfield !== undefined && bitfield !== null && !this.isBitfield(bitfield)) {
             throw new Error(`Expected 'default_member_permissions' to be a permission bitfield or null, got ${JSON.stringify(bitfield)}`);
+        }
+
+        this.validateEnumList(cmd.contexts, 'contexts', InteractionContextType);
+        this.validateEnumList(cmd.integration_types, 'integration_types', InteractionIntegrationType);
+        if (cmd.nsfw !== undefined && typeof cmd.nsfw !== 'boolean') {
+            throw new Error(`Expected 'nsfw' boolean, got ${JSON.stringify(cmd.nsfw)}`);
         }
 
         if (cmd.command_scope === 'guild') {
@@ -57,6 +70,37 @@ export class InteractionValidator {
         }
 
         return cmd as unknown as Interaction;
+    }
+
+    // Only the structure: Discord reports the other rules (lengths, limits...) with the option path
+    private static validateOptions(options: unknown, path: string): void {
+        if (!Array.isArray(options)) {
+            throw new Error(`Expected '${path}' array, got ${JSON.stringify(options)}`);
+        }
+        options.forEach((option: Record<string, unknown> | null, index) => {
+            const optionPath = `${path}[${index}]`;
+            if (!option || typeof option !== 'object' || Array.isArray(option)) {
+                throw new Error(`Expected '${optionPath}' object, got ${JSON.stringify(option)}`);
+            }
+            if (typeof option.type !== 'number' || !(option.type in DiscordOptionType)) {
+                throw new Error(`Expected '${optionPath}.type' option type (1-11), got ${JSON.stringify(option.type)}`);
+            }
+            for (const field of ['name', 'description']) {
+                if (typeof option[field] !== 'string') {
+                    throw new Error(`Expected '${optionPath}.${field}' string, got ${JSON.stringify(option[field])}`);
+                }
+            }
+            if (option.options !== undefined) this.validateOptions(option.options, `${optionPath}.options`);
+        });
+    }
+
+    // Null is what Discord returns for a field left to its default
+    private static validateEnumList(values: unknown, field: string, enumObject: Record<string, string | number>): void {
+        if (values === undefined || values === null) return;
+        const allowed = Object.values(enumObject).filter(value => typeof value === 'number');
+        if (!Array.isArray(values) || values.some(value => !allowed.includes(value))) {
+            throw new Error(`Expected '${field}' list of ${allowed.join(', ')}, got ${JSON.stringify(values)}`);
+        }
     }
 
     // A string of digits, or a number for bitfields that fit in one

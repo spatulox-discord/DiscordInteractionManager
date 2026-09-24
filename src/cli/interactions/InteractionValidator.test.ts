@@ -63,6 +63,35 @@ describe("InteractionValidator.validate", () => {
         }
     });
 
+    it("accepts valid options, contexts and integration types", () => {
+        const data = {
+            name: "wiki", type: 1, description: "d", command_scope: "global", nsfw: false,
+            contexts: [0, 2], integration_types: [0, 1],
+            options: [{type: 1, name: "search", description: "Search", options: [{type: 3, name: "query", description: "Query", required: true}]}],
+        };
+        assert.deepEqual(InteractionValidator.validate(data), data);
+        assert.doesNotThrow(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "global", contexts: null, integration_types: null}));
+    });
+
+    it("reports the path of an invalid option", () => {
+        const options = [{type: 1, name: "search", description: "Search", options: [{type: 3, name: "query"}]}];
+        assert.throws(
+            () => InteractionValidator.validate({name: "wiki", type: 1, description: "d", command_scope: "global", options}),
+            /options\[0\]\.options\[0\]\.description/,
+        );
+    });
+
+    it("rejects invalid options, contexts, integration types and nsfw", () => {
+        const base = {name: "wiki", type: 1, description: "d", command_scope: "global"};
+        for (const invalid of [
+            {options: {}}, {options: [null]}, {options: [{type: 12, name: "a", description: "d"}]}, {options: [{type: "3", name: "a", description: "d"}]},
+            {contexts: [3]}, {contexts: "0"}, {integration_types: [2]}, {integration_types: ["0"]},
+            {nsfw: "yes"},
+        ]) {
+            assert.throws(() => InteractionValidator.validate({...base, ...invalid}), JSON.stringify(invalid));
+        }
+    });
+
     it("rejects invalid data", () => {
         assert.throws(() => InteractionValidator.validate(false));
         assert.throws(() => InteractionValidator.validate({type: 1, description: "x", command_scope: "global"}));
