@@ -142,12 +142,37 @@ export abstract class BaseInteractionManager {
             }
 
             console.log(`${commandList.length} local ${this.folderPath}(s) found\n`);
+            this.warnDuplicates(commandList);
             this.printInteraction(commandList);
             return commandList;
         } catch (error) {
             Log.error(`${(error as Error).message}`);
             return [];
         }
+    }
+
+    /**
+     * Discord keeps one interaction per type and name in a scope: deploying a second file overwrites the first one,
+     * and both files end up with the same ID.
+     */
+    private warnDuplicates(commands: Interaction[]): void {
+        commands.forEach((cmd, index) => {
+            for (const other of commands.slice(index + 1)) {
+                if (cmd.type !== other.type || cmd.name !== other.name) continue;
+
+                let where: string;
+                if (cmd.command_scope === "global" && other.command_scope === "global") {
+                    where = "globally";
+                } else if (cmd.command_scope === "guild" && other.command_scope === "guild") {
+                    const shared = Object.keys(cmd.id).filter(guildId => guildId in other.id);
+                    if (shared.length === 0) continue;
+                    where = `in guild ${shared.join(", ")}`;
+                } else {
+                    continue;
+                }
+                Log.warn(`${cmd.filename} and ${other.filename} both define the ${InteractionDetails.typeLabel(cmd.type)} "${cmd.name}" ${where}: Discord keeps only one of them`);
+            }
+        });
     }
 
     private async fetchCommands(

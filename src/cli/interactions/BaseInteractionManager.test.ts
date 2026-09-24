@@ -353,6 +353,23 @@ describe("BaseInteractionManager.listFromFile", () => {
         assert.match(String(error.mock.calls[0]!.arguments[0]), /report\.json: a Message Context Menu does not belong in the commands folder/);
     });
 
+    it("warns about files defining the same command in the same scope", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("ping_copy.json", {name: "ping", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {[G1]: null}});
+        await writeCommand("here_elsewhere.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {[G2]: null}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        const warn = mock.method(console, "warn", () => {});
+
+        await manager.listFromFile(Listing.ALL);
+        await manager.listFromFile(Listing.ALL, ALL_GUILDS);
+
+        assert.equal(warn.mock.callCount(), 1);
+        assert.match(String(warn.mock.calls[0]!.arguments[0]), /ping(_copy)?\.json and ping(_copy)?\.json both define the Slash "ping" globally/);
+    });
+
     it("only skips files whose name starts with example", async () => {
         await writeCommand("example_v2.json", {name: "example", type: 1, description: "d", command_scope: "global"});
         await writeCommand("counterexample.json", {name: "counterexample", type: 1, description: "d", command_scope: "global"});
