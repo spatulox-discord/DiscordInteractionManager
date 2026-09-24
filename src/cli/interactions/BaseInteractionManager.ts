@@ -297,15 +297,6 @@ export abstract class BaseInteractionManager {
                 continue;
             }
 
-            if (cmd.command_scope === "global") {
-                IDList.push(cmd.id);
-            } else if (cmd.id && cmd.command_scope === "guild") {
-                Object.values(cmd.id).forEach(cmdId => {
-                    if(cmdId != null)
-                    IDList.push(cmdId)
-                });
-            }
-
             try {
                 let commandId: string | null | undefined;
 
@@ -333,6 +324,7 @@ export abstract class BaseInteractionManager {
                     // Global command
                     await this.rest.delete(Routes.applicationCommand(this.clientId, commandId));
                 }
+                IDList.push(commandId);
 
                 console.log(`${cmd.name} for ${guild?.name} deleted`);
             } catch (error) {
