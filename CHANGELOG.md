@@ -38,6 +38,7 @@ Date format : dd/mm/yyyy
     - Local files are written to a temporary file first, so a crash or a full disk can no longer leave a truncated file and lose its IDs
     - Local files are also checked for the structure of `options` (type, name, description, with the path of the invalid option), `contexts`, `integration_types` and `nsfw`, instead of failing on Discord
     - Every yes / no prompt shows `(y/n)` in the same way (some had no hint or no space before the answer)
+    - The name column of the tables is called "Name" (it was "Nom")
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator

@@ -22,7 +22,7 @@ export class GuildSelector {
             if(printResult){
                 console.table(this.guilds.map((g, _i) => ({
                     "Guild ID": g.id,
-                    Nom: g.name
+                    Name: g.name
                 })));
 
                 console.log(`\n📋 ${this.guilds.length} guild(s) found\n`);

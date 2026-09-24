@@ -33,7 +33,7 @@ export abstract class BaseInteractionManager {
     printInteraction(cmdList: Interaction[]): void {
         console.table(
             cmdList.map((cmd: Interaction) => ({
-                Nom: cmd.name,
+                Name: cmd.name,
                 Type: InteractionDetails.typeLabel(cmd.type),
                 Description: 'description' in cmd ? cmd.description : 'N/A',
                 Permissions: InteractionDetails.permissionsLabel(cmd),
@@ -77,7 +77,7 @@ export abstract class BaseInteractionManager {
                 const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
                 if (!cmd) continue;
                 if (!guildID && (cmd.command_scope === "guild") !== allGuilds) continue;
-                // === LISTING.DEPLOYED === Liste ceux QUI ONT un ID défini
+                // === LISTING.DEPLOYED === Only the ones with an ID
                 if (list === Listing.DEPLOYED) {
                     if (!cmd.id) {
                         continue
@@ -100,7 +100,7 @@ export abstract class BaseInteractionManager {
 
                 }
 
-                // === LISTING.LOCAL === Liste ceux SANS ID (ou vide pour guildID)
+                // === LISTING.LOCAL === Only the ones without an ID (in the requested guild if any)
                 if (list === Listing.LOCAL) {
                     if (!cmd.id) {
                         // No ID → OK
@@ -114,12 +114,11 @@ export abstract class BaseInteractionManager {
                         // Only deploy to the requested guild, the other ones stay pending in the file
                         cmd.id = {[guildID]: null};
                     } else if (cmd.id && cmd.command_scope === "guild") {
-                        //console.log(cmd)
-                        // *** FILTRER guild_ids and keep non-deployed ***
+                        // Skip it when deployed everywhere
                         const allDeployed = Object.values(cmd.id || {}).every(id => id != null);
                         if (allDeployed) continue;
 
-                        // Filtre les non-déployés
+                        // Only deploy to the guilds it is not deployed in yet
                         cmd.id = Object.fromEntries(
                             Object.entries(cmd.id || {}).filter(([_gId, id]) => id == null)
                         );
@@ -358,7 +357,7 @@ export abstract class BaseInteractionManager {
                 continue;
             }
 
-            // Lecture du fichier original pour préserver les IDs existants
+            // Read the file itself, to keep the IDs of the guilds that are not updated
             let fileCmd: Interaction | null = null;
             if (cmd.filename) {
                 const filePath = PathUtils.createPathFile(this.folderPath, cmd.filename);

@@ -20,7 +20,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
             type: 2
         };
 
-        // 1. Type & Nom
+        // 1. Type & name
         console.clear();
         console.log("🍽️ 1/6 - Menu Type");
         console.log("2 = User Menu | 3 = Message Menu");
