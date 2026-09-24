@@ -67,3 +67,19 @@ describe("BaseInteractionManager.delete", () => {
         assert.deepEqual((await readCommand("ping.json")).id, {"111": null, "222": "c2"});
     });
 });
+
+describe("BaseInteractionManager.update", () => {
+    it("keeps updating the next commands when one has no local file", async () => {
+        const pong = {name: "pong", type: 1, description: "Pong", command_scope: "global", id: "c2"};
+        await writeCommand("pong.json", pong);
+        const {manager, calls} = createManager();
+
+        await manager.update([
+            {name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"} as any,
+            {...pong, description: "New pong", filename: "pong.json"} as any,
+        ], null);
+
+        assert.deepEqual(calls.map(c => c.method), ["patch", "patch"]);
+        assert.equal((await readCommand("pong.json")).description, "New pong");
+    });
+});

@@ -411,40 +411,20 @@ export abstract class BaseInteractionManager {
                     }
                 }
 
-                if(cmd.command_scope !== fileCmd?.command_scope) {
-                    return
+                if (!cmd.filename || !fileCmd) {
+                    Log.error(`${cmd.name}: Local file not found, the file was not updated`);
+                    continue;
                 }
-                // Sauvegarde avec préservation des IDs existants
-                if (cmd.filename && fileCmd) {
-                    // Déterminer le type correct basé sur le scope dominant
-                    if(cmd.command_scope == "global" && fileCmd.command_scope == "guild"){
-                        console.error("Cannot update the interaction from a guild specific to a global interaction");
-                        return
-                    }
-                    if(cmd.command_scope == "guild" && fileCmd.command_scope == "global"){
-                        console.error("Cannot update the interaction from a global to a guild specific interaction");
-                        return
-                    }
-                    const isGlobal = (cmd.command_scope === 'global' || fileCmd.command_scope === 'global');
-
-                    const finalCmd: Interaction = isGlobal
-                        ? ({
-                            ...fileCmd,
-                            ...cmd,
-                            command_scope: 'global',
-                            id: cmd.id as string
-                        })
-                        : ({
-                            ...fileCmd,
-                            ...cmd,
-                            command_scope: 'guild' as const,
-                            id: { ...(fileCmd.id as SpecificCommandId || {}), ...(cmd.id as SpecificCommandId || {}) }
-                        });
-
-                    await this.saveInteraction(cmd.filename, finalCmd);
-                } else if (cmd.filename) {
-                    await this.saveInteraction(cmd.filename, cmd);
+                if (cmd.command_scope !== fileCmd.command_scope) {
+                    Log.error(`${cmd.name}: The scope differs from the local file, the file was not updated`);
+                    continue;
                 }
+
+                const finalCmd: Interaction = cmd.command_scope === "global"
+                    ? {...fileCmd, ...cmd, command_scope: 'global', id: cmd.id}
+                    : {...fileCmd, ...cmd, command_scope: 'guild', id: {...(fileCmd.id as SpecificCommandId), ...cmd.id}};
+
+                await this.saveInteraction(cmd.filename, finalCmd);
 
             } catch (error) {
                 Log.error(`${cmd.name}: ${(error as Error).message}`);
