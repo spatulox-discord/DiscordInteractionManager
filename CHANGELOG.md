@@ -57,6 +57,7 @@ Date format : dd/mm/yyyy
     - A local file with an invalid `default_member_permissions` (e.g. `"abc"`) emptied the whole listing : the file is now reported and skipped
     - Interactions saved from Discord with a permission unknown to `discord-api-types` (added recently by Discord) lost it once updated, and could become usable by everyone : their permission names are no longer saved, only the bitfield. The details show these permissions as `Unknown (<bit>)`
     - An unknown permission name in `default_member_permissions_string` (e.g. a typo) was skipped with a warning, restricting the interaction to administrators when it was the only one, and names such as `constructor` crashed : the file is now reported
+    - A context menu file in `commands/` (or a slash command in `context_menu/`) was deployed by the wrong manager, which then never listed it from Discord nor cleaned its ID once deleted : such a file is now reported and skipped
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 

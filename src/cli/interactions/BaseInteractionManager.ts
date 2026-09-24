@@ -500,12 +500,20 @@ export abstract class BaseInteractionManager {
         const data = await FileManager.readJsonFile(filePath);
         if (data === false) return null; // readJsonFile already logged why
 
+        let cmd: Interaction;
         try {
-            return InteractionValidator.validate(data);
+            cmd = InteractionValidator.validate(data);
         } catch (error) {
             Log.error(`Invalid interaction file ${filePath}: ${(error as Error).message}`);
             return null;
         }
+
+        // Its manager would never find it on Discord, nor clean its ID once deleted
+        if (!this.commandType.includes(cmd.type)) {
+            Log.error(`${filePath}: a ${InteractionDetails.typeLabel(cmd.type)} does not belong in the ${this.folderPath} folder`);
+            return null;
+        }
+        return cmd;
     }
 
     private async saveInteraction(fileName: string, cmd: Interaction): Promise<void> {

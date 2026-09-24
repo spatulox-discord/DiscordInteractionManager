@@ -328,6 +328,18 @@ describe("BaseInteractionManager.listFromFile", () => {
         assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["ping"]);
     });
 
+    it("reports a context menu in the commands folder", async () => {
+        await writeCommand("report.json", {name: "Report", type: 3, command_scope: "global"});
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "d", command_scope: "global"});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        const error = mock.method(console, "error", () => {});
+
+        assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["ping"]);
+        assert.match(String(error.mock.calls[0]!.arguments[0]), /report\.json: a Message Context Menu does not belong in the commands folder/);
+    });
+
     it("only skips files whose name starts with example", async () => {
         await writeCommand("example_v2.json", {name: "example", type: 1, description: "d", command_scope: "global"});
         await writeCommand("counterexample.json", {name: "counterexample", type: 1, description: "d", command_scope: "global"});
