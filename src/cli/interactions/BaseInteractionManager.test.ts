@@ -88,20 +88,23 @@ describe("BaseInteractionManager.deploy", () => {
         assert.equal("filename" in saved, false);
     });
 
-    it("only deploys to the pending guilds and keeps the failed ones pending", async () => {
+    it("only deploys to the requested guild and keeps the other ones", async () => {
         await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": null, "333": null}});
-        const {manager, calls} = createManager(({route}) => {
-            if (route.includes("/guilds/333/")) throw new Error("Missing Access");
-            return {id: "c2"};
-        });
+        const {manager, calls} = createManager(() => ({id: "c2"}));
 
-        await manager.deploy(await manager.listFromFile(Listing.LOCAL));
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL, "222"));
 
-        assert.deepEqual(calls.map(c => c.route), [
-            "/applications/123456789012345678/guilds/222/commands",
-            "/applications/123456789012345678/guilds/333/commands",
-        ]);
+        assert.deepEqual(calls.map(c => c.route), ["/applications/123456789012345678/guilds/222/commands"]);
         assert.deepEqual((await readCommand("ping.json")).id, {"111": "c1", "222": "c2", "333": null});
+    });
+
+    it("keeps the guild pending when Discord refuses the deployment", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"333": null}});
+        const {manager} = createManager(() => { throw new Error("Missing Access"); });
+
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL, "333"));
+
+        assert.deepEqual((await readCommand("ping.json")).id, {"333": null});
     });
 
     it("saves the bitfield matching the permission names", async () => {
@@ -172,16 +175,40 @@ describe("BaseInteractionManager.listFromFile", () => {
         assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
     });
 
-    it("does not list guild commands deployed nowhere as deployed", async () => {
-        await writeCommand("pending.json", {name: "pending", type: 1, description: "d", command_scope: "guild", id: {"111": null}});
+    it("does not list guild commands pending in the guild as deployed", async () => {
+        await writeCommand("pending.json", {name: "pending", type: 1, description: "d", command_scope: "guild", id: {"111": null, "222": "c1"}});
         await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {"111": "c2", "222": null}});
         const {manager} = createManager();
         mock.method(console, "log", () => {});
         mock.method(console, "table", () => {});
 
-        const commands = await manager.listFromFile(Listing.DEPLOYED);
+        const commands = await manager.listFromFile(Listing.DEPLOYED, "111");
 
         assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
+    });
+
+    it("only lists global commands when no guild is given", async () => {
+        await writeCommand("pending.json", {name: "pending", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("deployed.json", {name: "deployed", type: 1, description: "d", command_scope: "global", id: "c1"});
+        await writeCommand("guild.json", {name: "guild", type: 1, description: "d", command_scope: "guild", id: {"111": null, "222": "c2"}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["pending"]);
+        assert.deepEqual((await manager.listFromFile(Listing.DEPLOYED)).map(c => c.name), ["deployed"]);
+        assert.deepEqual((await manager.listFromFile(Listing.ALL)).map(c => c.name).sort(), ["deployed", "pending"]);
+    });
+
+    it("lists the local files of a guild", async () => {
+        await writeCommand("global.json", {name: "global", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {"111": null}});
+        await writeCommand("elsewhere.json", {name: "elsewhere", type: 1, description: "d", command_scope: "guild", id: {"222": null}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        assert.deepEqual((await manager.listFromFile(Listing.ALL, "111")).map(c => c.name), ["here"]);
     });
 
     it("reports an unreadable file once and skips it", async () => {

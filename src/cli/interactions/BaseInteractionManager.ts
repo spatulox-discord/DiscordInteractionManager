@@ -78,6 +78,7 @@ export abstract class BaseInteractionManager {
 
                 const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
                 if (!cmd) continue;
+                if (!guildID && cmd.command_scope !== "global") continue;
                 // === LISTING.DEPLOYED === Liste ceux QUI ONT un ID défini
                 if (list === Listing.DEPLOYED) {
                     if (!cmd.id) {
@@ -111,6 +112,9 @@ export abstract class BaseInteractionManager {
                     } else if (guildID && cmd.id[guildID]) {
                         // Deployed in this guild → skip
                         continue;
+                    } else if (guildID && guildID in cmd.id) {
+                        // Only deploy to the requested guild, the other ones stay pending in the file
+                        cmd.id = {[guildID]: null};
                     } else if (cmd.id && cmd.command_scope === "guild") {
                         //console.log(cmd)
                         // *** FILTRER guild_ids and keep non-deployed ***
