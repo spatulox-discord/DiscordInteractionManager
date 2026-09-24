@@ -28,5 +28,7 @@ describe("InteractionValidator.validate", () => {
         assert.throws(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "guild"}));
         assert.throws(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "global", id: {}}));
         assert.throws(() => InteractionValidator.validate({name: "a", type: 2}));
+        assert.throws(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "global", default_member_permissions_string: "Administrator"}));
+        assert.throws(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "global", default_member_permissions_string: [8]}));
     });
 });

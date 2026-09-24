@@ -39,11 +39,15 @@ export abstract class BaseCLI {
             if (!option) {
                 console.log("Invalid choice");
             } else {
-                const result = await option.action();
-                if (result === BACK) return;
-                if (result instanceof BaseCLI) {
-                    await result.showMainMenu();
-                    continue;
+                try {
+                    const result = await option.action();
+                    if (result === BACK) return;
+                    if (result instanceof BaseCLI) {
+                        await result.showMainMenu();
+                        continue;
+                    }
+                } catch (error) {
+                    console.error(`❌ ${(error as Error).message}`);
                 }
             }
 

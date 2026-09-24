@@ -331,10 +331,10 @@ export abstract class BaseInteractionManager {
                 fileCmd = await this.readInteraction(filePath);
             }
 
-            const body = InteractionPayload.toDiscordPatch(cmd);
-            this.syncPermissions(cmd, body);
-
             try {
+                const body = InteractionPayload.toDiscordPatch(cmd);
+                this.syncPermissions(cmd, body);
+
                 // Case 1: Specific Guild
                 if (guild) {
                     let commandId: string | undefined | null;
@@ -528,7 +528,11 @@ export abstract class BaseInteractionManager {
             }
 
             if (hasDeletion) {
-                await this.saveInteraction(file, localCmd);
+                try {
+                    await this.saveInteraction(file, localCmd);
+                } catch (error) {
+                    Log.error(`${file}: the deleted ID could not be removed from the file: ${(error as Error).message}`);
+                }
             }
         }
 
