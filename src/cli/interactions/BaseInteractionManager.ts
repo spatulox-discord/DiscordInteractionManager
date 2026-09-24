@@ -19,12 +19,10 @@ export abstract class BaseInteractionManager {
     public abstract commandType: number[];
 
     protected clientId: string;
-    protected token: string;
     protected rest: REST;
 
     constructor(clientId: string, token: string) {
         this.clientId = clientId;
-        this.token = token;
         this.rest = new REST({ version: '10' }).setToken(token);
     }
 
