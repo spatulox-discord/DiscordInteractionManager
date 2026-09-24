@@ -9,6 +9,7 @@ import {
 } from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
 import {Utils} from "../utils/Utils";
+import {DiscordRegex} from "../../utils/DiscordRegex";
 
 export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     protected getTitle(): string {
@@ -32,8 +33,8 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         console.clear();
         console.log("📝 1/8 - Base");
         config.name = await this.input.requireInput(
-            "Name (a-z0-9_-, 1-32 chars): ",
-            val => /^[a-z0-9_-]{1,32}$/.test(val)
+            "Name (lowercase letters, digits, - _ ', 1-32 chars): ",
+            SlashCommandGeneratorCLI.isValidName
         );
         config.description = await this.input.requireInput(
             "Description (1-100 chars): ",
@@ -83,6 +84,10 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         console.clear();
         console.log("💾 8/8 - Save");
         return await this.save(FolderName.SLASH_COMMANDS, config)
+    }
+
+    static isValidName(name: string): boolean {
+        return DiscordRegex.COMMAND_NAME.test(name) && name === name.toLowerCase();
     }
 
     static allowedOptionTypes(parent: DiscordOptionType | undefined, siblings: CommandOption[]): DiscordOptionType[] {
@@ -135,8 +140,8 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
     private async buildOption(type: DiscordOptionType, usedNames: string[] = []): Promise<CommandOption> {
         const name = await this.input.requireInput(
-            "Option name (a-z0-9_-, 1-32, unique): ",
-            val => /^[a-z0-9_-]{1,32}$/.test(val) && !usedNames.includes(val)
+            "Option name (lowercase letters, digits, - _ ', 1-32, unique): ",
+            val => SlashCommandGeneratorCLI.isValidName(val) && !usedNames.includes(val)
         );
         const description = await this.input.requireInput(
             "Description (1-100): ",

@@ -18,6 +18,20 @@ beforeEach(() => {
     mock.method(console, "clear", () => {});
 });
 
+describe("SlashCommandGeneratorCLI.isValidName", () => {
+    it("accepts lowercase unicode names", () => {
+        for (const name of ["ping", "liber-thé", "l'heure", "ping_2", "日本"]) {
+            assert.equal(SlashCommandGeneratorCLI.isValidName(name), true, name);
+        }
+    });
+
+    it("rejects uppercase, spaces and too long names", () => {
+        for (const name of ["", "Ping", "LIBER-THÉ", "my command", "a".repeat(33), "ping!"]) {
+            assert.equal(SlashCommandGeneratorCLI.isValidName(name), false, name);
+        }
+    });
+});
+
 describe("SlashCommandGeneratorCLI choices", () => {
     it("validates choice values against the option type", () => {
         assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.STRING, "abc"), true);
