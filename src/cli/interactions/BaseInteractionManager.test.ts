@@ -62,6 +62,19 @@ describe("BaseInteractionManager.delete", () => {
         assert.deepEqual((await readCommand("ping.json")).id, local.id);
     });
 
+    it("does not read the example files when cleaning the IDs", async () => {
+        await writeCommand("ping.json", local);
+        await fs.writeFile(path.join(folder, "commands", "example.json"), "{ template, not JSON");
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        const error = mock.method(console, "error", () => {});
+
+        await manager.delete([remote], guild(G1));
+
+        assert.equal(error.mock.callCount(), 0);
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+    });
+
     it("only clears the ID of the guild it was deleted from", async () => {
         await writeCommand("ping.json", local);
         const {manager, calls} = createManager();

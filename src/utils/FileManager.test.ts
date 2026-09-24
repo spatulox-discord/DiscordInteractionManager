@@ -38,6 +38,17 @@ describe("FileManager.isSafeFilename", () => {
     });
 });
 
+describe("FileManager.isExampleFile", () => {
+    it("only matches names starting with example", () => {
+        for (const name of ["example.json", "Example_ping.json", " example"]) {
+            assert.equal(FileManager.isExampleFile(name), true, name);
+        }
+        for (const name of ["ping.json", "counterexample.json", "my_example.json"]) {
+            assert.equal(FileManager.isExampleFile(name), false, name);
+        }
+    });
+});
+
 describe("FileManager.toSafeFilename", () => {
     it("keeps the file in its folder", () => {
         assert.equal(FileManager.toSafeFilename("Traduire l'Automaton"), "Traduire l'Automaton");

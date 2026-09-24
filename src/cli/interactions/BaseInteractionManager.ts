@@ -66,17 +66,15 @@ export abstract class BaseInteractionManager {
         console.log(`Listing Local Handlers (${this.folderPath}) ${scopeMessage}`);
 
         try {
-            const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath));
-            if (!files || files.length === 0) {
+            const files = await this.listLocalFiles();
+            if (files.length === 0) {
                 console.log('No files found');
                 return [];
             }
 
             const commandList: Interaction[] = [];
 
-            for (const [_index, file] of files.entries()) {
-                if (/^example/i.test(file)) continue;
-
+            for (const file of files) {
                 const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
                 if (!cmd) continue;
                 if (!guildID && (cmd.command_scope === "guild") !== allGuilds) continue;
@@ -269,10 +267,8 @@ export abstract class BaseInteractionManager {
     }
 
     private async readGuildFiles(): Promise<{ cmd: Interaction, file: string }[]> {
-        const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath)) || [];
         const result: { cmd: Interaction, file: string }[] = [];
-        for (const file of files) {
-            if (/^example/i.test(file)) continue;
+        for (const file of await this.listLocalFiles()) {
             const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
             if (cmd?.command_scope === "guild") result.push({cmd, file});
         }
@@ -496,6 +492,12 @@ export abstract class BaseInteractionManager {
         return guild ? deployed.filter(([guildId]) => guildId === guild.id) : deployed;
     }
 
+    // The JSON files of the folder, without the ignored example files
+    private async listLocalFiles(): Promise<string[]> {
+        const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath)) || [];
+        return files.filter(file => !FileManager.isExampleFile(file));
+    }
+
     private async readInteraction(filePath: string): Promise<Interaction | null> {
         const data = await FileManager.readJsonFile(filePath);
         if (data === false) return null; // readJsonFile already logged why
@@ -524,8 +526,8 @@ export abstract class BaseInteractionManager {
 
     private async removeLocalIdFromFile(idListToDelete: string[]): Promise<void> {
 
-        const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath));
-        if (!files || files.length === 0) {
+        const files = await this.listLocalFiles();
+        if (files.length === 0) {
             console.log('No local files to clean');
             return
         }

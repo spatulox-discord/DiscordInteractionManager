@@ -18,6 +18,11 @@ export class FileManager {
         }
     }
 
+    // Example files are shipped as templates and never read as interactions
+    static isExampleFile(filename: string): boolean {
+        return /^example/i.test(filename.trim());
+    }
+
     static isSafeFilename(filename: string): boolean {
         const name = filename.trim();
         return name !== '' && name !== '.' && name !== '..' && !/[\\/]/.test(name);
