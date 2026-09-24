@@ -192,7 +192,7 @@ function renderActions() {
         localActions.push(button(state.scope === "all" ? `Update in all their guilds${count(toUpdate)}` : `Update${count(toUpdate)}`, () => update(toUpdate), {disabled: !toUpdate.length}));
         localActions.push(button(`Delete file${count(removable)}`, () => deleteFiles(removable), {disabled: !removable.length, tone: "ghost"}));
     }
-    localActions.push(button(`New ${KIND_LABELS[state.kind]}`, () => openEditor(null), {tone: "ghost"}));
+    localActions.push(button(`New ${KIND_LABELS[state.kind]}`, () => openEditor(null), {tone: "success"}));
     replace($("#local-actions"), localActions);
 
     const remoteActions = [];
