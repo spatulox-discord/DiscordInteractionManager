@@ -1,7 +1,7 @@
+import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
 import {BaseCLI} from "../BaseCLI";
 import {BaseInteractionManager} from "../interactions/BaseInteractionManager";
 import {InteractionListManagerCLI} from "./InteractionListManagerCLI";
-import {Guild} from "discord.js";
 import {Interaction} from "../type/InteractionType";
 import {Listing} from "../enum/Listing";
 
@@ -25,7 +25,7 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
     }
 
     private async handleUpdate(): Promise<void> {
-        let guild: Guild | null = null
+        let guild: RESTAPIPartialCurrentUserGuild | null = null
         const rep = await this.input.yesNoInput("Do you want to update a global command or a specific guild command (y=global/n=specific): ")
 
         console.log('═'.repeat(80));
@@ -51,7 +51,7 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
     private async handleDelete(): Promise<void> {
 
         const rep = await this.input.yesNoInput("Do you want to delete a global command or a specific guild command (y=global/n=specific): ")
-        let guild: Guild | null = null
+        let guild: RESTAPIPartialCurrentUserGuild | null = null
         let commands: Interaction[]
         if(rep){
             commands = await this.manager.list()

@@ -1,8 +1,8 @@
+import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
 import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
 import { BaseInteractionManager } from "../interactions/BaseInteractionManager";
 import {GuildSelector} from "../GuildSelector";
 import {Env} from "../../Env";
-import {Guild} from "discord.js";
 import {PathUtils} from "../../utils/PathUtils";
 import {FileManager} from "../../utils/FileManager";
 
@@ -38,14 +38,14 @@ export class InteractionListManagerCLI extends BaseCLI {
         await this.manager.list();
     }
 
-    protected async guildListRemote(guild: Guild | null): Promise<void> {
+    protected async guildListRemote(guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         if(!guild) {
             return
         }
         await this.manager.listGuild(guild.id)
     }
 
-    protected async guildListAllRemote(guild: Guild | null): Promise<void> {
+    protected async guildListAllRemote(guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         if(!guild) {
             return
         }

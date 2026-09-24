@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import {REST} from '@discordjs/rest';
-import {RESTGetCurrentApplicationResult, Routes} from 'discord-api-types/v10';
-import {Guild} from "discord.js";
+import {RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult, Routes} from 'discord-api-types/v10';
 import * as fs from 'fs/promises';
 import {Log} from "../../utils/Log";
 import {FileManager} from "../../utils/FileManager";
@@ -192,7 +191,7 @@ export abstract class BaseInteractionManager {
         );
     }
 
-    async listAllGuilds(guilds: Guild[]): Promise<{ guild: string; globalCommands: Interaction[], guildCommands: Interaction[] }[]> {
+    async listAllGuilds(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<{ guild: string; globalCommands: Interaction[], guildCommands: Interaction[] }[]> {
         console.log("📡 Getting all guilds...\n");
         console.log(`📋 ${guilds.length} guild(s) found\n`);
 
@@ -200,7 +199,7 @@ export abstract class BaseInteractionManager {
 
         const globalCommands = await this.list(false)
 
-        const guildCommandPromises = guilds.map(async (guild: Guild) => {
+        const guildCommandPromises = guilds.map(async (guild: RESTAPIPartialCurrentUserGuild) => {
             try {
 
                 let guildCommands = await this.listGuild(guild.id, false)
@@ -263,7 +262,7 @@ export abstract class BaseInteractionManager {
         console.log(`${updatedCount}/${commands.length} deployed`);
     }
 
-    async delete(commands: Interaction[], guild: Guild | null): Promise<void> {
+    async delete(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         console.log(`Deleting ${commands.length} ${this.folderPath}(s)...`);
 
         const IDList: string[] = [];
@@ -314,7 +313,7 @@ export abstract class BaseInteractionManager {
         }
     }
 
-    async update(commands: Interaction[], guild: Guild | null): Promise<void> {
+    async update(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         console.log(`Updating ${commands.length} ${this.folderPath}(s)...`);
 
         for (const cmd of commands) {
@@ -364,7 +363,7 @@ export abstract class BaseInteractionManager {
                         });
                         console.log(`${cmd.name} updated globally`);
                     }
-                    // 2b: Guild-specific command
+                    // 2b: RESTAPIPartialCurrentUserGuild-specific command
                     else if (cmd.id && cmd.command_scope === "guild") {
                         const deployed = Object.entries(cmd.id)
                             .filter((entry): entry is [string, string] => !!entry[1]);
@@ -377,7 +376,7 @@ export abstract class BaseInteractionManager {
                             if (result.status === "fulfilled") {
                                 console.log(`${cmd.name} updated in guild ${guildId}`);
                             } else {
-                                Log.error(`${cmd.name}: Guild ${guildId}: ${(result.reason as Error).message}`);
+                                Log.error(`${cmd.name}: RESTAPIPartialCurrentUserGuild ${guildId}: ${(result.reason as Error).message}`);
                             }
                         });
                     }

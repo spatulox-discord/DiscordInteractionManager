@@ -1,4 +1,4 @@
-import {PermissionFlagsBits} from "discord.js";
+import {PermissionFlagsBits} from "discord-api-types/v10";
 
 export enum CommandType {
     SLASH = 1,

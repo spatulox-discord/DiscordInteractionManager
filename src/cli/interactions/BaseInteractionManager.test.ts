@@ -1,9 +1,9 @@
+import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
 import {afterEach, beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {Guild} from "discord.js";
 import {CommandManager} from "./InteractionManager";
 import {Listing} from "../enum/Listing";
 
@@ -22,7 +22,7 @@ function createManager(handler: RestHandler = () => ({})) {
     return {manager, calls};
 }
 
-const guild = (id: string) => ({id, name: `Guild ${id}`}) as Guild;
+const guild = (id: string) => ({id, name: `Guild ${id}`}) as RESTAPIPartialCurrentUserGuild;
 
 let folder: string;
 

@@ -1,19 +1,18 @@
 import {REST} from "@discordjs/rest";
-import {Routes} from 'discord-api-types/v10';
-import {Guild} from "discord.js";
+import {RESTAPIPartialCurrentUserGuild, Routes} from 'discord-api-types/v10';
 import {Prompt} from "./utils/Prompt";
 
 const GUILDS_PAGE_SIZE = 200;
 
 export class GuildSelector {
-    protected guilds: Guild[] = [];
+    protected guilds: RESTAPIPartialCurrentUserGuild[] = [];
     protected rest: REST;
 
     constructor(token: string, private readonly input: Prompt = new Prompt()) {
         this.rest = new REST({ version: '10' }).setToken(token);
     }
 
-    async list(printResult: boolean = true): Promise<Guild[]> {
+    async list(printResult: boolean = true): Promise<RESTAPIPartialCurrentUserGuild[]> {
         console.clear();
         if(printResult) console.log("Guilds Selection\n");
 
@@ -36,14 +35,14 @@ export class GuildSelector {
         }
     }
 
-    private async fetchAllGuilds(): Promise<Guild[]> {
-        const guilds: Guild[] = [];
+    private async fetchAllGuilds(): Promise<RESTAPIPartialCurrentUserGuild[]> {
+        const guilds: RESTAPIPartialCurrentUserGuild[] = [];
         let after: string | undefined;
         while (true) {
             const query = new URLSearchParams({limit: String(GUILDS_PAGE_SIZE)});
             if (after) query.set("after", after);
 
-            const page = await this.rest.get(Routes.userGuilds(), {query}) as Guild[];
+            const page = await this.rest.get(Routes.userGuilds(), {query}) as RESTAPIPartialCurrentUserGuild[];
             guilds.push(...page);
 
             const last = page[page.length - 1];
@@ -52,7 +51,7 @@ export class GuildSelector {
         }
     }
 
-    async chooseGuild(): Promise<Guild | null> {
+    async chooseGuild(): Promise<RESTAPIPartialCurrentUserGuild | null> {
         await this.list()
         console.log("Please select a guild to continue")
         if (!this.guilds.length) {

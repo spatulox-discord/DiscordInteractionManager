@@ -1,6 +1,6 @@
 import {describe, it} from "node:test";
 import assert from "node:assert/strict";
-import {PermissionFlagsBits} from "discord.js";
+import {PermissionFlagsBits} from "discord-api-types/v10";
 import {Utils} from "./Utils";
 
 describe("Utils.permissionsToBitfield", () => {
