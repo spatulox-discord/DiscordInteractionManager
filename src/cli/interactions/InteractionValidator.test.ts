@@ -42,6 +42,20 @@ describe("InteractionValidator.validate", () => {
         }
     });
 
+    it("accepts permission bitfields as strings, numbers or null", () => {
+        for (const bitfield of ["0", "8", 8, 0, null]) {
+            const data = {name: "a", type: 2, command_scope: "global", default_member_permissions: bitfield};
+            assert.deepEqual(InteractionValidator.validate(data), data, String(bitfield));
+        }
+    });
+
+    it("rejects permission bitfields Discord cannot read", () => {
+        for (const bitfield of ["abc", "", "-8", "8.5", 8.5, -8, true, ["8"]]) {
+            const data = {name: "a", type: 2, command_scope: "global", default_member_permissions: bitfield};
+            assert.throws(() => InteractionValidator.validate(data), JSON.stringify(bitfield));
+        }
+    });
+
     it("rejects invalid data", () => {
         assert.throws(() => InteractionValidator.validate(false));
         assert.throws(() => InteractionValidator.validate({type: 1, description: "x", command_scope: "global"}));

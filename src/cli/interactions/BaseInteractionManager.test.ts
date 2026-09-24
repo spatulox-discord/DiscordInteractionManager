@@ -317,6 +317,17 @@ describe("BaseInteractionManager.listFromFile", () => {
         assert.equal(error.mock.callCount(), 2);
     });
 
+    it("keeps listing the other files when a permission bitfield is invalid", async () => {
+        await writeCommand("broken.json", {name: "broken", type: 1, description: "d", command_scope: "global", default_member_permissions: "abc"});
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "d", command_scope: "global", default_member_permissions: "8"});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        mock.method(console, "error", () => {});
+
+        assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["ping"]);
+    });
+
     it("only skips files whose name starts with example", async () => {
         await writeCommand("example_v2.json", {name: "example", type: 1, description: "d", command_scope: "global"});
         await writeCommand("counterexample.json", {name: "counterexample", type: 1, description: "d", command_scope: "global"});

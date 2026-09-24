@@ -25,6 +25,11 @@ export class InteractionValidator {
             throw new Error(`Expected 'default_member_permissions_string' string[], got ${JSON.stringify(permissions)}`);
         }
 
+        const bitfield = cmd.default_member_permissions;
+        if (bitfield !== undefined && bitfield !== null && !this.isBitfield(bitfield)) {
+            throw new Error(`Expected 'default_member_permissions' to be a permission bitfield or null, got ${JSON.stringify(bitfield)}`);
+        }
+
         if (cmd.command_scope === 'guild') {
             if (!cmd.id || typeof cmd.id !== 'object' || Array.isArray(cmd.id)) {
                 throw new Error(`Expected guild 'id' Record<string, string|null>, got ${typeof cmd.id}`);
@@ -47,6 +52,12 @@ export class InteractionValidator {
         }
 
         return cmd as unknown as Interaction;
+    }
+
+    // A string of digits, or a number for bitfields that fit in one
+    private static isBitfield(value: unknown): boolean {
+        if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0;
+        return typeof value === 'string' && /^\d+$/.test(value);
     }
 
     private static isDiscordId(value: unknown): boolean {

@@ -54,6 +54,7 @@ Date format : dd/mm/yyyy
     - Guild commands deployed nowhere were listed as deployed (with an empty ID)
     - Messages : "deleted for undefined" for global commands, one header per guild when counting, the scope instead of the guild ID in guild listing errors, the step numbering of the slash command generator, the message shown at 25 choices, the out of range permission index was accepted
     - dotenv no longer prints its advertising tip on every run
+    - A local file with an invalid `default_member_permissions` (e.g. `"abc"`) emptied the whole listing : the file is now reported and skipped
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 
