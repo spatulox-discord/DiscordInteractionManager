@@ -24,16 +24,26 @@ function allowedTypes(parent, others, allTypes) {
  * Creates and edits interaction files. The fields it does not know (e.g. localizations) are kept as they are.
  */
 export class Builder {
-    constructor(root, {meta, guilds, folders, onSaved, onClose}) {
+    constructor(root, {meta, guilds, folders, onSaved}) {
         this.root = root;
         this.meta = meta;
         this.guilds = guilds;
         this.folders = folders;
         this.onSaved = onSaved;
-        this.onClose = onClose;
         this.optionTypeNames = Object.fromEntries(meta.optionTypes.map(({name, value}) => [value, name]));
         this.allTypes = meta.optionTypes.map(({value}) => value);
         this.permissionFilter = "";
+
+        // Outside of the rendered content, so a render does not replay its animation
+        this.content = h("div");
+        this.unsavedBar = h("div", {class: "unsaved-bar", role: "status", hidden: true, onanimationend: event => this.barAnimationEnded(event)},
+            h("span", {}, "Careful, you have unsaved changes!"),
+            h("div", {class: "actions"},
+                h("button", {type: "button", class: "text-button", onclick: () => this.reset()}, "Reset"),
+                h("button", {type: "button", class: "success", onclick: () => this.save()}, "Save Changes"),
+            ),
+        );
+        root.append(this.content, this.unsavedBar);
     }
 
     async open(kind, filename) {
@@ -44,11 +54,11 @@ export class Builder {
         this.original = null;
 
         if (filename) {
-            replace(this.root, h("p", {class: "empty"}, "Loading…"));
+            replace(this.content, h("p", {class: "empty"}, "Loading…"));
             try {
                 this.original = await api("GET", `${kind}/files/${encodeURIComponent(filename)}`);
             } catch (error) {
-                replace(this.root, h("p", {class: "empty"}, `${filename} cannot be opened: ${error.message}`));
+                replace(this.content, h("p", {class: "empty"}, `${filename} cannot be opened: ${error.message}`));
                 return;
             }
             this.cmd = clone(this.original);
@@ -59,22 +69,68 @@ export class Builder {
                 : {name: "", type: 2, command_scope: "global"};
         }
         this.permissionMode = this.detectPermissionMode();
-        this.saved = JSON.stringify(this.output());
+        this.keepAsSaved();
         this.render();
+    }
+
+    // ---- Unsaved changes ----
+
+    // The state that Reset goes back to
+    keepAsSaved() {
+        this.savedState = {cmd: clone(this.cmd), filename: this.filename, permissionMode: this.permissionMode};
+        this.saved = this.snapshot();
+    }
+
+    snapshot() {
+        return JSON.stringify([this.filename.trim(), this.output()]);
     }
 
     // Changed since it was opened or saved
     isDirty() {
-        return JSON.stringify(this.output()) !== this.saved;
+        return this.cmd !== undefined && this.snapshot() !== this.saved;
     }
 
-    // Leaves the builder, after a confirmation when the changes would be lost
-    async discard(then) {
-        if (this.isDirty()) {
-            const what = this.existing ? `your changes to ${this.filename}.json` : "this new interaction";
-            if (!await confirmDialog(`Discard ${what}?`, "Discard", true, "Keep editing")) return;
+    // Slides in when shown, and out (the same animation reversed) before being hidden
+    showBar(visible) {
+        const bar = this.unsavedBar;
+        if (visible) {
+            bar.classList.remove("leaving");
+            bar.hidden = false;
+        } else if (!bar.hidden) {
+            bar.classList.remove("alert");
+            bar.classList.add("leaving");
         }
-        then();
+    }
+
+    barAnimationEnded(event) {
+        if (event.animationName === "bar-out") {
+            this.unsavedBar.hidden = true;
+            this.unsavedBar.classList.remove("leaving");
+        } else if (event.animationName === "bar-shake") {
+            this.unsavedBar.classList.remove("alert");
+        }
+    }
+
+    reset() {
+        const {cmd, filename, permissionMode} = this.savedState;
+        this.cmd = clone(cmd);
+        this.filename = filename;
+        this.permissionMode = permissionMode;
+        this.errors = [];
+        this.render();
+    }
+
+    /**
+     * As on Discord, the builder cannot be left with unsaved changes: the bar flashes instead.
+     * @returns true when there is nothing to lose
+     */
+    canLeave() {
+        if (!this.isDirty()) return true;
+        const bar = this.unsavedBar;
+        bar.classList.remove("alert");
+        void bar.offsetWidth; // Restarts the animation
+        bar.classList.add("alert");
+        return false;
     }
 
     // ---- State helpers ----
@@ -174,7 +230,7 @@ export class Builder {
 
     render() {
         const isSlash = this.cmd.type === 1;
-        replace(this.root,
+        replace(this.content,
             h("div", {class: "builder"},
                 h("div", {class: "builder-form"},
                     this.fileSection(),
@@ -189,9 +245,7 @@ export class Builder {
                         h("div", {class: "panel-head"},
                             h("h2", {}, "Preview"),
                             h("div", {class: "actions"},
-                                h("button", {type: "button", class: "ghost", onclick: () => this.discard(() => this.onClose())}, "Cancel"),
-                                h("button", {type: "button", class: "ghost", onclick: () => this.discard(() => this.open(this.kind, null))}, "New"),
-                                h("button", {type: "button", onclick: () => this.save()}, "Save file"),
+                                h("button", {type: "button", class: "ghost", onclick: () => { if (this.canLeave()) this.open(this.kind, null); }}, "New"),
                             ),
                         ),
                         this.errorsBox = h("ul", {class: "errors"}),
@@ -205,6 +259,7 @@ export class Builder {
 
     refreshSide() {
         this.previewBox.textContent = JSON.stringify(this.output(), null, 2);
+        this.showBar(this.isDirty());
         replace(this.errorsBox, this.errors.map(error => h("li", {}, error)));
         this.errorsBox.hidden = this.errors.length === 0;
     }
@@ -547,7 +602,7 @@ export class Builder {
             this.original = saved.interaction;
             this.cmd = clone(saved.interaction);
             this.permissionMode = this.detectPermissionMode();
-            this.saved = JSON.stringify(this.output());
+            this.keepAsSaved();
             this.render();
             this.onSaved(saved.filename);
         } catch (error) {

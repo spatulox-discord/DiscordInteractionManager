@@ -30,10 +30,9 @@ export const $ = selector => document.querySelector(selector);
 export const $$ = selector => [...document.querySelectorAll(selector)];
 
 // Resolves true when the user confirms
-export function confirmDialog(text, okLabel = "Confirm", danger = false, cancelLabel = "Cancel") {
+export function confirmDialog(text, okLabel = "Confirm", danger = false) {
     const dialog = $("#confirm");
     $("#confirm-text").textContent = text;
-    $("#confirm-cancel").textContent = cancelLabel;
     const ok = $("#confirm-ok");
     ok.textContent = okLabel;
     ok.classList.toggle("danger", danger);

@@ -345,8 +345,14 @@ function renderNavigation() {
     $(".guild-picker").hidden = state.scope !== "guild";
 }
 
+// The builder keeps its unsaved changes: leaving it is refused until they are saved or reset
+function canLeaveBuilder() {
+    return state.view !== "builder" || !builder || builder.canLeave();
+}
+
 function bindNavigation() {
     $$("[data-kind]").forEach(tab => tab.addEventListener("click", () => {
+        if (!canLeaveBuilder()) return;
         state.kind = tab.dataset.kind;
         state.selectedLocal.clear();
         state.selectedRemote.clear();
@@ -354,6 +360,7 @@ function bindNavigation() {
         if (state.view === "builder") builder.open(state.kind, null); else refresh();
     }));
     $$("[data-view]").forEach(tab => tab.addEventListener("click", () => {
+        if (tab.dataset.view === state.view || !canLeaveBuilder()) return;
         state.view = tab.dataset.view;
         renderNavigation();
         if (state.view === "manage") refresh(); else builder.open(state.kind, null);
@@ -373,6 +380,9 @@ function bindNavigation() {
         refresh();
     });
     $("#refresh").addEventListener("click", refresh);
+    window.addEventListener("beforeunload", event => {
+        if (state.view === "builder" && builder?.isDirty()) event.preventDefault();
+    });
     $("#clear-log").addEventListener("click", () => replace($("#log")));
     $("#details-close").addEventListener("click", () => { $("#details").hidden = true; });
     document.addEventListener("keydown", event => { if (event.key === "Escape") $("#details").hidden = true; });
@@ -402,11 +412,7 @@ async function start() {
         guilds: state.guilds,
         folders: state.app.folders,
         onSaved: () => log("info", "Saved: deploy or update it from the Manage view"),
-        onClose: () => {
-            state.view = "manage";
-            renderNavigation();
-            refresh();
-        },
+
     });
     await refresh();
 }

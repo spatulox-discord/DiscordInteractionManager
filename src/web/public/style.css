@@ -15,6 +15,10 @@
     --danger-bg: #fde8ea;
     --info: #3b54c4;
     --info-bg: #e7ebff;
+    --success: #248046;
+    --bar-bg: #111214;
+    --bar-text: #f2f3f5;
+    --bar-alert: #da373c;
     --radius: 8px;
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     color-scheme: light;
@@ -38,6 +42,7 @@
         --danger-bg: #3d1a1d;
         --info: #9aa8ff;
         --info-bg: #222a4d;
+        --bar-bg: #0b0c0e;
         color-scheme: dark;
     }
 }
@@ -115,6 +120,9 @@ button.ghost:hover:not(:disabled) { background: var(--surface-2); filter: none; 
 button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 button.danger-text { color: var(--danger); }
 button.small { padding: 3px 8px; font-size: 12.5px; }
+button.success { background: var(--success); border-color: var(--success); color: #fff; }
+button.text-button { background: none; border-color: transparent; color: var(--bar-text); }
+button.text-button:hover:not(:disabled) { text-decoration: underline; filter: none; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent); text-align: left; white-space: normal; }
 button.link:hover { text-decoration: underline; filter: none; }
 button.busy { pointer-events: none; opacity: .6; }
@@ -225,6 +233,42 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
 
 /* ---- Builder ---- */
 
+/* Shown while the builder has unsaved changes, as in the Discord settings */
+.unsaved-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    z-index: 20;
+    transform: translateX(-50%);
+    width: min(720px, calc(100% - 32px));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 10px 10px 10px 16px;
+    border-radius: var(--radius);
+    background: var(--bar-bg);
+    color: var(--bar-text);
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgb(0 0 0 / .35);
+    animation: bar-in .2s ease-out;
+}
+.unsaved-bar.alert { background: var(--bar-alert); animation: bar-shake .45s; }
+.unsaved-bar.leaving { animation: bar-out .2s ease-in forwards; pointer-events: none; }
+@keyframes bar-in { from { opacity: 0; transform: translate(-50%, 12px); } }
+@keyframes bar-out { to { opacity: 0; transform: translate(-50%, 12px); } }
+@keyframes bar-shake {
+    20%, 60% { transform: translateX(calc(-50% - 8px)); }
+    40%, 80% { transform: translateX(calc(-50% + 8px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .unsaved-bar, .unsaved-bar.alert { animation: none; }
+    /* Still an animation, since the bar is hidden when it ends */
+    .unsaved-bar.leaving { animation: bar-out 1ms forwards; }
+}
+
+.builder { padding-bottom: 72px; }
 .builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); gap: 16px; align-items: start; }
 .builder-form { display: grid; gap: 16px; }
 .sticky { position: sticky; top: 72px; }
