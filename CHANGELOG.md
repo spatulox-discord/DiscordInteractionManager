@@ -1,6 +1,12 @@
 # Changelog
 Date format : dd/mm/yyyy
 
+### Unreleased - 2.4.0
+- Add :
+    - A local web UI, started with `npx dim web` (`--port`, `--no-open`) or "Open Web UI" in the main menu : list, deploy, update and delete interactions in the Global, Guild and All guilds scopes, and create or edit interaction files with a visual builder. It only listens on `127.0.0.1` and needs the session token of the printed URL
+- Change :
+    - The builder of the web UI and the generators of the CLI share the same rules (names, options, choices and their limits)
+
 ### 24/09/2026 - 2.3.2
 - Change :
     - Ctrl+C quits the CLI right away (exit code 130), even during a deployment or a listing of every guild, and Ctrl+D or the end of a piped input quits it too (exit code 0)

@@ -1,3 +1,4 @@
+import {cpSync} from 'node:fs'
 import { defineConfig } from 'tsup'
 
 export default defineConfig([
@@ -10,5 +11,7 @@ export default defineConfig([
         minify: true,
         clean: true,
         // dependencies from package.json are left external by tsup
+        // The page of the web UI, served from dist/public
+        onSuccess: async () => cpSync('src/web/public', 'dist/public', {recursive: true}),
     }
 ])

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Discord Interaction Manager</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">
+        <img src="icon.svg" alt="" width="28" height="28">
+        <div>
+            <h1>Discord Interaction Manager</h1>
+            <p id="bot" class="muted">Connecting…</p>
+        </div>
+    </div>
+    <nav class="tabs" aria-label="Interaction kind">
+        <button type="button" data-kind="commands" class="tab">Slash commands</button>
+        <button type="button" data-kind="context_menu" class="tab">Context menus</button>
+    </nav>
+    <nav class="tabs" aria-label="View">
+        <button type="button" data-view="manage" class="tab">Manage</button>
+        <button type="button" data-view="builder" class="tab">Builder</button>
+    </nav>
+</header>
+
+<main>
+    <section id="manage-view" hidden>
+        <div class="toolbar">
+            <div class="segmented" role="radiogroup" aria-label="Scope">
+                <button type="button" data-scope="global">Global</button>
+                <button type="button" data-scope="guild">Guild</button>
+                <button type="button" data-scope="all">All guilds</button>
+            </div>
+            <label class="guild-picker" hidden>
+                <span>Guild</span>
+                <select id="guild-select"></select>
+            </label>
+            <button type="button" id="refresh" class="ghost">Refresh</button>
+        </div>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>Local files <span id="local-folder" class="muted mono"></span></h2>
+                <div class="actions" id="local-actions"></div>
+            </div>
+            <div id="local-table" class="table-wrap"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>On Discord</h2>
+                <div class="actions" id="remote-actions"></div>
+            </div>
+            <div id="remote-table" class="table-wrap"></div>
+        </section>
+    </section>
+
+    <section id="builder-view" hidden></section>
+
+    <section class="panel log-panel">
+        <div class="panel-head">
+            <h2>Log</h2>
+            <div class="actions"><button type="button" id="clear-log" class="ghost">Clear</button></div>
+        </div>
+        <ol id="log" class="log"></ol>
+    </section>
+</main>
+
+<aside id="details" class="drawer" hidden>
+    <div class="drawer-head">
+        <h2 id="details-title">Details</h2>
+        <button type="button" id="details-close" class="ghost" aria-label="Close">✕</button>
+    </div>
+    <pre id="details-body" class="mono"></pre>
+</aside>
+
+<dialog id="confirm">
+    <form method="dialog">
+        <p id="confirm-text"></p>
+        <div class="actions">
+            <button value="cancel" id="confirm-cancel" class="ghost">Cancel</button>
+            <button value="ok" id="confirm-ok">Confirm</button>
+        </div>
+    </form>
+</dialog>
+</body>
+</html>
