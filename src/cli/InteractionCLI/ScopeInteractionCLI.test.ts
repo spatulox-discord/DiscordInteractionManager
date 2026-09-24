@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import {GlobalInteractionCLI} from "./GlobalInteractionCLI";
 import {GuildInteractionCLI} from "./GuildInteractionCLI";
+import {AllGuildsInteractionCLI} from "./AllGuildsInteractionCLI";
+import {ALL_GUILDS, Listing} from "../enum/Listing";
 import {InteractionManagerCLI} from "./InteractionManagerCLI";
 import {GuildSelector} from "../GuildSelector";
 import {InteractionPayload} from "../interactions/InteractionPayload";
@@ -116,5 +118,40 @@ describe("InteractionManagerCLI", () => {
 
         assert.ok(menu instanceof GuildInteractionCLI);
         assert.equal((menu as any).guild, guild);
+    });
+});
+
+describe("AllGuildsInteractionCLI", () => {
+    const ping = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": "c2"}};
+
+    function allGuilds(calls: unknown[][]) {
+        const fakeManager = {
+            folderPath: "commands",
+            listFromFile: async (...args: unknown[]) => { calls.push(["listFromFile", ...args]); return [ping]; },
+            listPerGuild: async (...args: unknown[]) => { calls.push(["listPerGuild", ...args]); return [ping]; },
+            update: async (...args: unknown[]) => { calls.push(["update", ...args]); },
+            delete: async (...args: unknown[]) => { calls.push(["delete", ...args]); },
+        };
+        const cli = new AllGuildsInteractionCLI(undefined as any, fakeManager as any, "CommandManager") as any;
+        cli.input.ask = async () => "0";
+        return cli;
+    }
+
+    beforeEach(() => {
+        process.env.DISCORD_BOT_TOKEN ||= "token";
+        mock.method(console, "table", () => {});
+        mock.method(GuildSelector.prototype, "list", async () => [guild]);
+    });
+
+    it("updates the deployed guild commands in all their guilds", async () => {
+        const calls: unknown[][] = [];
+        await allGuilds(calls).handleUpdateAll();
+        assert.deepEqual(calls, [["listFromFile", Listing.DEPLOYED, ALL_GUILDS], ["update", [ping], null]]);
+    });
+
+    it("deletes the commands listed from Discord from all their guilds", async () => {
+        const calls: unknown[][] = [];
+        await allGuilds(calls).handleDeleteAll();
+        assert.deepEqual(calls, [["listPerGuild", [guild]], ["delete", [ping], null]]);
     });
 });

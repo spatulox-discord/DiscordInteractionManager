@@ -4,6 +4,7 @@ import {GuildSelector} from "../GuildSelector";
 import {Env} from "../../Env";
 import {GlobalInteractionCLI} from "./GlobalInteractionCLI";
 import {GuildInteractionCLI} from "./GuildInteractionCLI";
+import {AllGuildsInteractionCLI} from "./AllGuildsInteractionCLI";
 
 export class InteractionManagerCLI extends BaseCLI {
 
@@ -18,6 +19,7 @@ export class InteractionManagerCLI extends BaseCLI {
     protected readonly menuSelection: MenuSelectionCLI = [
         { label: `Global ${this.manager.folderPath}`, action: () => new GlobalInteractionCLI(this, this.manager, this.managerKey) },
         { label: `Guild ${this.manager.folderPath}`, action: () => this.openGuild() },
+        { label: `${this.manager.folderPath} in all guilds`, action: () => new AllGuildsInteractionCLI(this, this.manager, this.managerKey) },
         { label: 'Back', action: () => this.goBack() },
     ];
 
