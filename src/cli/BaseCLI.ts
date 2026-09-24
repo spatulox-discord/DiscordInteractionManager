@@ -2,6 +2,8 @@ import {Env} from "../Env";
 import {Prompt} from "./utils/Prompt";
 
 export const BACK = Symbol("back");
+// Returned by an action that already waited for the user, to skip "Press Enter to continue"
+export const NO_PAUSE = Symbol("no pause");
 
 export type MenuSelectionCLI = {
     label: string;
@@ -42,6 +44,7 @@ export abstract class BaseCLI {
                 try {
                     const result = await option.action();
                     if (result === BACK) return;
+                    if (result === NO_PAUSE) continue;
                     if (result instanceof BaseCLI) {
                         await result.showMainMenu();
                         continue;
@@ -80,7 +83,7 @@ export abstract class BaseCLI {
         console.log('  🌍 Global → Global interactions only');
         console.log('  🏠 Guild  → Choose a guild once, every action only applies to that guild');
         console.log('  In both menus:');
-        console.log('  📊 List    → Show deployed interactions on Discord, or local JSON files');
+        console.log('  📊 List    → Show deployed interactions on Discord, or local JSON files, then enter numbers to see their details');
         console.log('  🚀 Deploy  → Deploy local JSON files → Discord');
         console.log('  🔄 Update  → Update Discord interactions based on local JSON files');
         console.log('  🗑️ Delete  → Remove Discord interactions and their ID from local JSON files');

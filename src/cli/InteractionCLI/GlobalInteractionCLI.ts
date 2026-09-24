@@ -9,8 +9,8 @@ export class GlobalInteractionCLI extends ScopeInteractionCLI {
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
-        { label: `List deployed ${this.manager.folderPath}`, action: () => this.manager.list() },
-        { label: `List local ${this.manager.folderPath} files`, action: () => this.manager.listFromFile(Listing.ALL) },
+        { label: `List deployed ${this.manager.folderPath}`, action: async () => this.offerDetails(await this.manager.list()) },
+        { label: `List local ${this.manager.folderPath} files`, action: async () => this.offerDetails(await this.manager.listFromFile(Listing.ALL)) },
         { label: "Deploy local", action: () => this.handleDeploy(null) },
         { label: "Update", action: () => this.handleUpdate(null) },
         { label: "Delete", action: () => this.handleDelete(null) },

@@ -99,6 +99,21 @@ Choose an option:
 | Count interactions per guild | | ✅ |
 | Change guild | | ✅ |
 
+After any "List" action, enter the numbers of the table (e.g. `0,2`) to see the details of these interactions, or press Enter to go back:
+```
+/wiki — Search the wiki   (Slash, guild, 111 → 1234…, 222 → not deployed)
+Permissions  : BanMembers
+Contexts     : SERVER_CHANNEL, BOT_DM
+Integration  : Discord default
+NSFW         : no
+Options:
+  ├─ search (SUB_COMMAND) — Search
+  │  ├─ query (STRING, required, length 1-100, autocomplete) — Query
+  │  └─ page (INTEGER, min 1) — Page
+  │     choices: First = 1
+  └─ random (SUB_COMMAND) — Random page
+```
+
 ## Deploy an interaction
 > - Once you have deployed an interaction, you can update/delete it using the cli
 

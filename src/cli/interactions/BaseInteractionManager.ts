@@ -5,14 +5,14 @@ import {Log} from "../../utils/Log";
 import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
 import {
-    CommandType, Interaction,
+    Interaction,
     OnlineInteractionConfig,
     SpecificCommandId
 } from "../type/InteractionType";
-import {Utils} from "../utils/Utils";
 import {Listing} from "../enum/Listing";
 import {InteractionValidator} from "./InteractionValidator";
 import {InteractionPayload} from "./InteractionPayload";
+import {InteractionDetails} from "./InteractionDetails";
 
 export abstract class BaseInteractionManager {
     public abstract folderPath: string;
@@ -35,13 +35,9 @@ export abstract class BaseInteractionManager {
         console.table(
             cmdList.map((cmd: Interaction) => ({
                 Nom: cmd.name,
-                Type: cmd.type === CommandType.SLASH ? 'Slash' :
-                    cmd.type === CommandType.USER_CONTEXT_MENU ? 'User Context Menu' : 'Message Context Menu',
+                Type: InteractionDetails.typeLabel(cmd.type),
                 Description: 'description' in cmd ? cmd.description : 'N/A',
-                Permissions: (() => {
-                    const permissions = InteractionPayload.resolvePermissions(cmd);
-                    return permissions === "0" ? "Administrators only" : Utils.bitfieldToPermissions(permissions).join(", ");
-                })(),
+                Permissions: InteractionDetails.permissionsLabel(cmd),
                 ID: (() => {
                     if (!cmd.id) return 'N/A';
                     if (cmd.command_scope === "global") return cmd.id;

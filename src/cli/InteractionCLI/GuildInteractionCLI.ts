@@ -1,5 +1,5 @@
 import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
-import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
+import {BaseCLI, MenuSelectionCLI, NO_PAUSE} from "../BaseCLI";
 import {BaseInteractionManager} from "../interactions/BaseInteractionManager";
 import {Listing} from "../enum/Listing";
 import {ScopeInteractionCLI} from "./ScopeInteractionCLI";
@@ -15,9 +15,9 @@ export class GuildInteractionCLI extends ScopeInteractionCLI {
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
-        { label: `List ${this.manager.folderPath} deployed in this guild`, action: () => this.manager.listGuild(this.guild.id) },
+        { label: `List ${this.manager.folderPath} deployed in this guild`, action: async () => this.offerDetails(await this.manager.listGuild(this.guild.id)) },
         { label: `List all ${this.manager.folderPath} available in this guild (global + guild)`, action: () => this.listAvailable() },
-        { label: `List local ${this.manager.folderPath} files for this guild`, action: () => this.manager.listFromFile(Listing.ALL, this.guild.id) },
+        { label: `List local ${this.manager.folderPath} files for this guild`, action: async () => this.offerDetails(await this.manager.listFromFile(Listing.ALL, this.guild.id)) },
         { label: "Deploy local to this guild", action: () => this.handleDeploy(this.guild) },
         { label: `Add a guild ${this.manager.folderPath} to this guild`, action: () => this.handleAdd() },
         { label: "Update in this guild", action: () => this.handleUpdate(this.guild) },
@@ -35,14 +35,12 @@ export class GuildInteractionCLI extends ScopeInteractionCLI {
         await this.manager.deploy(selected);
     }
 
-    private async listAvailable(): Promise<void> {
-        const globalCommands = await this.manager.list(false)
-        const guildCommands = await this.manager.listGuild(this.guild.id, false)
-
-        console.log(`Global ${this.manager.folderPath}`)
-        this.manager.printInteraction(globalCommands)
-        console.log(`${this.manager.folderPath} specific to this guild`)
-        this.manager.printInteraction(guildCommands)
+    // One table, so the numbers can be used to see the details (the GuildID column tells global ones apart)
+    private async listAvailable(): Promise<typeof NO_PAUSE | void> {
+        const commands = [...await this.manager.list(false), ...await this.manager.listGuild(this.guild.id, false)];
+        console.log(`${commands.length} ${this.manager.folderPath}(s) available in this guild\n`);
+        this.manager.printInteraction(commands);
+        return this.offerDetails(commands);
     }
 
     private async changeGuild(): Promise<void> {

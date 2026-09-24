@@ -8,6 +8,7 @@ import {GuildInteractionCLI} from "./GuildInteractionCLI";
 import {InteractionManagerCLI} from "./InteractionManagerCLI";
 import {GuildSelector} from "../GuildSelector";
 import {InteractionPayload} from "../interactions/InteractionPayload";
+import {NO_PAUSE} from "../BaseCLI";
 
 const manager = {folderPath: "commands"} as any;
 const guild = {id: "111", name: "Guild 111"} as any;
@@ -38,6 +39,34 @@ describe("ScopeInteractionCLI.selectCommands", () => {
         for (const answer of ["1,abc", "1,3", "1.5", ""]) {
             assert.deepEqual(await select(answer, commands), [], answer);
         }
+    });
+});
+
+describe("ScopeInteractionCLI.offerDetails", () => {
+    it("shows the chosen details until Enter is pressed", async () => {
+        const answers = ["5", "1", ""];
+        const cli = new GlobalInteractionCLI(undefined as any, manager, "CommandManager") as any;
+        cli.input.ask = async () => answers.shift();
+        const log = mock.method(console, "log", () => {});
+
+        const result = await cli.offerDetails([
+            {name: "ping", type: 1, description: "Ping", command_scope: "global"},
+            {name: "Report", type: 3, command_scope: "global"},
+        ]);
+
+        assert.equal(result, NO_PAUSE);
+        assert.deepEqual(answers, []);
+        const output = log.mock.calls.map(call => String(call.arguments[0])).join("\n");
+        assert.match(output, /Invalid number/);
+        assert.match(output, /Report {3}\(Message Context Menu/);
+        assert.doesNotMatch(output, /\/ping/);
+    });
+
+    it("does not ask anything when nothing was listed", async () => {
+        const cli = new GlobalInteractionCLI(undefined as any, manager, "CommandManager") as any;
+        cli.input.ask = async () => { throw new Error("should not ask"); };
+
+        assert.equal(await cli.offerDetails([]), undefined);
     });
 });
 

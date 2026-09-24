@@ -1,6 +1,7 @@
 import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
-import {BaseCLI} from "../BaseCLI";
+import {BaseCLI, NO_PAUSE} from "../BaseCLI";
 import {BaseInteractionManager} from "../interactions/BaseInteractionManager";
+import {InteractionDetails} from "../interactions/InteractionDetails";
 import {GuildSelector} from "../GuildSelector";
 import {Env} from "../../Env";
 import {Interaction} from "../type/InteractionType";
@@ -71,6 +72,28 @@ export abstract class ScopeInteractionCLI extends BaseCLI {
 
         console.log(`${selected.length} selected ${handlerManagerType}`);
         return selected;
+    }
+
+    /**
+     * After a listing, shows the details of the chosen interactions until the user presses Enter.
+     */
+    protected async offerDetails(commands: Interaction[]): Promise<typeof NO_PAUSE | void> {
+        if (commands.length === 0) return;
+
+        while (true) {
+            const input = (await this.input.ask('Numbers to see the details (separated by a comma, or Enter to go back): ')).trim();
+            if (!input) return NO_PAUSE;
+
+            const indices = Utils.parseIndexList(input);
+            if (!indices || indices.some(i => i >= commands.length)) {
+                console.log('Invalid number');
+                continue;
+            }
+            for (const i of indices) {
+                console.log('\n' + InteractionDetails.format(commands[i]!).join('\n'));
+            }
+            console.log('');
+        }
     }
 
     /**
