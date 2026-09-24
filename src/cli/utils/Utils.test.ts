@@ -26,3 +26,16 @@ describe("Utils.bitfieldToPermissions", () => {
         assert.deepEqual(Utils.bitfieldToPermissions(bitfield), ["KickMembers", "BanMembers"]);
     });
 });
+
+describe("Utils.permissionEntries", () => {
+    it("lists each permission once, under its current name", () => {
+        const names = Utils.permissionEntries().map(([name]) => name);
+        assert.equal(names.includes("ManageGuildExpressions"), true);
+        assert.equal(names.includes("ManageEmojisAndStickers"), false);
+        assert.deepEqual(Utils.bitfieldToPermissions(PermissionFlagsBits.ManageGuildExpressions), ["ManageGuildExpressions"]);
+    });
+
+    it("still accepts deprecated names", () => {
+        assert.equal(Utils.permissionsToBitfield(["ManageEmojisAndStickers"]), PermissionFlagsBits.ManageGuildExpressions.toString());
+    });
+});

@@ -2,6 +2,14 @@ import {PermissionFlagsBits} from "discord.js";
 
 export class Utils {
 
+    static permissionEntries(): [string, bigint][] {
+        const namesByValue = new Map<bigint, string>();
+        for (const [name, value] of Object.entries(PermissionFlagsBits)) {
+            namesByValue.set(value, name);
+        }
+        return [...namesByValue].map(([value, name]) => [name, value]);
+    }
+
     static permissionsToBitfield(perms: string[] | undefined): string | number | undefined {
         if (!perms || perms.length === 0) return undefined;
         if(!Array.isArray(perms)){
@@ -26,7 +34,7 @@ export class Utils {
         const bits = BigInt(bitfield);
         const result: string[] = [];
 
-        for (const [name, value] of Object.entries(PermissionFlagsBits)) {
+        for (const [name, value] of this.permissionEntries()) {
             if ((bits & value) === value) {
                 result.push(name);
             }

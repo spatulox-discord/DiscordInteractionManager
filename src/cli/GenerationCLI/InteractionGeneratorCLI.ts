@@ -1,5 +1,4 @@
 import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
-import {PermissionFlagsBits} from "discord.js";
 import {DiscordRegex} from "../../utils/DiscordRegex";
 import {
     ContextMenuConfigGenerator,
@@ -25,7 +24,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
     protected async addPermissions(config: SlashCommandConfigGenerator | ContextMenuConfigGenerator): Promise<void> {
         console.clear();
 
-        const permEntries = Object.entries(PermissionFlagsBits);
+        const permEntries = Utils.permissionEntries();
         const numberedPerms = permEntries.map(([name, _value], index) =>
             `${index}. ${name}`
         ).join('\n');
@@ -52,12 +51,12 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         }
 
         const selectedNums = input.split(',').map(n => parseInt(n.trim()));
-        const selectedPermNames: (keyof typeof PermissionFlagsBits)[] = [];
+        const selectedPermNames: string[] = [];
 
         for (const i of selectedNums) {
             const entry = permEntries[i];
             if (entry) {
-                selectedPermNames.push(entry[0] as keyof typeof PermissionFlagsBits);
+                selectedPermNames.push(entry[0]);
             }
         }
 
