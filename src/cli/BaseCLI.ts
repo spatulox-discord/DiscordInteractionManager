@@ -198,11 +198,10 @@ export abstract class BaseCLI {
             return this.showMainMenu();
         }
 
-        try {
-            await FileManager.writeJsonFile(PathUtils.createPathFolder(folderName), finalFilename, data);
+        if (await FileManager.writeJsonFile(PathUtils.createPathFolder(folderName), finalFilename, data)) {
             console.log(`File saved: ${PathUtils.createPathFile(folderName, finalFilename)}`);
-        } catch (error) {
-            console.error("Error saving file:", error);
+        } else {
+            console.error("The file could not be saved");
         }
 
         return
