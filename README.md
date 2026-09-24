@@ -39,7 +39,6 @@ npm install @spatulox/discord-interaction-manager
 You can use dotenv or set them by hand
 ```
 DISCORD_BOT_TOKEN="" // Discord Bot Token
-DISCORD_BOT_CLIENTID="" // The clientID of your bot
 DISCORD_INTERACTION_FOLDER="" // Optionnal, redirect where the generated interactions files are stored
 DISCORD_BOT_DEV (optional)
  * Set to `true` to enable **development mode**. This switches:

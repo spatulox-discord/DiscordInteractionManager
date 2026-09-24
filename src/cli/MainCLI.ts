@@ -3,7 +3,7 @@ import {BaseCLI, MenuSelectionCLI} from "./BaseCLI";
 import {InteractionCLI} from "./InteractionCLI/InteractionCLI";
 import {GenerationCLI} from "./GenerationCLI/GenerationCLI";
 import {Env} from "../Env";
-import {CommandManager} from "./interactions/InteractionManager";
+import {BaseInteractionManager} from "./interactions/BaseInteractionManager";
 
 /**
  * --- MainCLI ---
@@ -17,7 +17,9 @@ export class MainCLI extends BaseCLI {
 
     async start(): Promise<void> {
         try {
-            BaseCLI.botName = await new CommandManager(Env.clientId, Env.token).getBotName();
+            const application = await BaseInteractionManager.fetchApplication(Env.token);
+            BaseCLI.botName = application.name;
+            BaseCLI.applicationId = application.id;
         } catch (error) {
             throw new Error(`Cannot connect to Discord, check DISCORD_BOT_TOKEN and your connection (${(error as Error).message})`);
         }
@@ -40,7 +42,6 @@ export class MainCLI extends BaseCLI {
 
 async function main(): Promise<void> {
     try {
-        void Env.clientId;
         void Env.token;
     } catch (error) {
         console.error(`❌ ${(error as Error).message}`);

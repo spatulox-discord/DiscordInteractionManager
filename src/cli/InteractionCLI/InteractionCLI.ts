@@ -4,8 +4,8 @@ import {InteractionManagerCLI} from "./InteractionManagerCLI";
 import {Env} from "../../Env";
 
 export class InteractionCLI extends BaseCLI {
-    private readonly commandManager = new CommandManager(Env.clientId, Env.token);
-    private readonly contextMenuManager = new ContextMenuManager(Env.clientId, Env.token);
+    private readonly commandManager = new CommandManager(BaseCLI.applicationId, Env.token);
+    private readonly contextMenuManager = new ContextMenuManager(BaseCLI.applicationId, Env.token);
 
     protected getTitle(): string {
         return '🔄 Interaction Manager CLI';

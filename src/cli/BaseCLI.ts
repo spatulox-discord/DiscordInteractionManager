@@ -10,6 +10,7 @@ export type MenuSelectionCLI = {
 
 export abstract class BaseCLI {
     protected static botName = "Unknown Bot";
+    protected static applicationId = "";
 
     constructor(parent?: BaseCLI, protected readonly input: Prompt = parent?.input ?? new Prompt()) {}
 

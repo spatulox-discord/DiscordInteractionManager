@@ -28,9 +28,9 @@ export abstract class BaseInteractionManager {
         this.rest = new REST({ version: '10' }).setToken(token);
     }
 
-    async getBotName(): Promise<string> {
-        const botUser = await this.rest.get(Routes.currentApplication()) as RESTGetCurrentApplicationResult;
-        return botUser.name;
+    static async fetchApplication(token: string): Promise<RESTGetCurrentApplicationResult> {
+        const rest = new REST({ version: '10' }).setToken(token);
+        return await rest.get(Routes.currentApplication()) as RESTGetCurrentApplicationResult;
     }
 
     async printInteraction(cmdList: Interaction[]): Promise<void> {
