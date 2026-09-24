@@ -1,7 +1,7 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
-import {DiscordOptionType} from "../type/InteractionType";
+import {CommandOption, DiscordOptionType} from "../type/InteractionType";
 
 function scripted(answers: string[]): any {
     const generator = new SlashCommandGeneratorCLI();
@@ -50,5 +50,48 @@ describe("SlashCommandGeneratorCLI.optionalNumber", () => {
 
     it("returns undefined when left empty", async () => {
         assert.equal(await scripted([""]).optionalNumber("Min value: "), undefined);
+    });
+});
+
+describe("SlashCommandGeneratorCLI options rules", () => {
+    const {SUB_COMMAND, SUB_COMMAND_GROUP, STRING, USER} = DiscordOptionType;
+    const option = (type: DiscordOptionType, required?: boolean): CommandOption => ({type, name: `o${type}`, description: "d", required});
+
+    it("only allows subcommands inside a group", () => {
+        assert.deepEqual(SlashCommandGeneratorCLI.allowedOptionTypes(SUB_COMMAND_GROUP, []), [SUB_COMMAND]);
+    });
+
+    it("never allows subcommands inside a subcommand", () => {
+        const allowed = SlashCommandGeneratorCLI.allowedOptionTypes(SUB_COMMAND, []);
+        assert.equal(allowed.includes(SUB_COMMAND) || allowed.includes(SUB_COMMAND_GROUP), false);
+        assert.equal(allowed.includes(STRING), true);
+    });
+
+    it("does not mix subcommands and regular options at the same level", () => {
+        assert.deepEqual(SlashCommandGeneratorCLI.allowedOptionTypes(undefined, [option(SUB_COMMAND)]), [SUB_COMMAND, SUB_COMMAND_GROUP]);
+        assert.equal(SlashCommandGeneratorCLI.allowedOptionTypes(undefined, [option(STRING)]).includes(SUB_COMMAND), false);
+    });
+
+    it("puts required options first", () => {
+        const sorted = SlashCommandGeneratorCLI.sortRequiredFirst([option(STRING, false), option(USER, true)]);
+        assert.deepEqual(sorted.map(o => o.required), [true, false]);
+    });
+
+    it("builds a valid subcommand tree", async () => {
+        const generator = scripted([
+            "y", "1", "sub", "Sub",
+            "y", "1", "3", "a", "A", "n", "n", "", "", "n",
+            "y", "6", "a", "b", "B", "y",
+            "n",
+            "n",
+        ]);
+
+        const options = JSON.parse(JSON.stringify(await generator.addOptions()));
+        assert.deepEqual(options, [{
+            type: 1, name: "sub", description: "Sub", options: [
+                {type: 6, name: "b", description: "B", required: true},
+                {type: 3, name: "a", description: "A", required: false},
+            ],
+        }]);
     });
 });

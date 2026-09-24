@@ -66,7 +66,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         console.clear();
         console.log("⚙️ 5/7 - Options/Subcommands");
         const result = await this.addOptions();
-        if(result){
+        if(result.length > 0){
             config.options = result;
         }
 
@@ -85,65 +85,73 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         return await this.save(FolderName.SLASH_COMMANDS, config)
     }
 
-    private async addOptions(): Promise<CommandOption[]> {
-        let options: CommandOption[] = [];
+    static allowedOptionTypes(parent: DiscordOptionType | undefined, siblings: CommandOption[]): DiscordOptionType[] {
+        const all = Object.values(DiscordOptionType).filter((v): v is DiscordOptionType => typeof v === 'number');
+        const isSubcommand = (type: DiscordOptionType) =>
+            type === DiscordOptionType.SUB_COMMAND || type === DiscordOptionType.SUB_COMMAND_GROUP;
 
-        const addOptions = await this.yesNoInput("Add options/subcommands ? (y/n): ");
-        if (!addOptions) return options;
+        if (parent === DiscordOptionType.SUB_COMMAND_GROUP) return [DiscordOptionType.SUB_COMMAND];
+        if (parent === DiscordOptionType.SUB_COMMAND) return all.filter(type => !isSubcommand(type));
 
-        while (true) {
-            console.clear();
-            console.log("🚀 Options type :");
-            console.log("Valid options : " +
-                Object.entries(DiscordOptionType)
-                    .filter(([, value]) => typeof value === 'number')
-                    .map(([key, value]) => `${value}.${key}`)
-                    .join(', ')
-            );
-
-            const numericValues = Object.values(DiscordOptionType).filter((v): v is DiscordOptionType => typeof v === 'number');
-            const maxType = Math.max(...numericValues);
-            const minType = Math.min(...numericValues);
-
-
-            const type = parseInt(await this.requireInput(
-                `Type (${minType}-${maxType}): `,
-                val => {
-                    const n = parseInt(val);
-                    return n >= minType && n <= maxType;
-                }
-            )) as DiscordOptionType;
-
-            const option = await this.buildOption(type);
-            options.push(option);
-
-            if (!await this.yesNoInput("Other option ? (y/n): ")) break;
-        }
-        return options
+        const first = siblings[0];
+        if (!first) return all;
+        return all.filter(type => isSubcommand(type) === isSubcommand(first.type));
     }
 
-    private async buildOption(type: DiscordOptionType): Promise<CommandOption> {
+    static sortRequiredFirst(options: CommandOption[]): CommandOption[] {
+        return [...options].sort((a, b) => Number(!!b.required) - Number(!!a.required));
+    }
+
+    private async addOptions(parent?: DiscordOptionType): Promise<CommandOption[]> {
+        const options: CommandOption[] = [];
+
+        if (parent === DiscordOptionType.SUB_COMMAND_GROUP) {
+            console.log("A subcommand group needs at least one subcommand");
+        } else if (!await this.yesNoInput("Add options/subcommands ? (y/n): ")) {
+            return options;
+        }
+
+        while (true) {
+            const allowed = SlashCommandGeneratorCLI.allowedOptionTypes(parent, options);
+            console.clear();
+            console.log("🚀 Options type :");
+            console.log("Valid options : " + allowed.map(type => `${type}.${DiscordOptionType[type]}`).join(', '));
+
+            const type = Number(await this.requireInput(
+                `Type (${allowed.join(', ')}): `,
+                val => allowed.includes(Number(val))
+            )) as DiscordOptionType;
+
+            options.push(await this.buildOption(type, options.map(option => option.name)));
+
+            if (options.length >= 25) {
+                console.log("Maximum of 25 options reached");
+                break;
+            }
+            if (!await this.yesNoInput("Other option ? (y/n): ")) break;
+        }
+        return SlashCommandGeneratorCLI.sortRequiredFirst(options);
+    }
+
+    private async buildOption(type: DiscordOptionType, usedNames: string[] = []): Promise<CommandOption> {
         const name = await this.requireInput(
-            "Option name (a-z0-9_-, 1-32): ",
-            val => /^[a-z0-9_-]{1,32}$/.test(val)
+            "Option name (a-z0-9_-, 1-32, unique): ",
+            val => /^[a-z0-9_-]{1,32}$/.test(val) && !usedNames.includes(val)
         );
         const description = await this.requireInput(
             "Description (1-100): ",
             val => val.length >= 1 && val.length <= 100
         );
-        const required = type !== 2 && await this.yesNoInput("Required ? (y/n): ");
 
-        const option: CommandOption = { type, name, description, required };
+        const option: CommandOption = { type, name, description };
 
-        await this.handleOptionType(option, type);
-
-        if (type === 1 || type === 2) {
-            const result = await this.addOptions();
-            if(result){
-                option.options = result;
-            }
+        if (type === DiscordOptionType.SUB_COMMAND || type === DiscordOptionType.SUB_COMMAND_GROUP) {
+            option.options = await this.addOptions(type);
+            return option;
         }
 
+        option.required = await this.yesNoInput("Required ? (y/n): ");
+        await this.handleOptionType(option, type);
         return option;
     }
 
