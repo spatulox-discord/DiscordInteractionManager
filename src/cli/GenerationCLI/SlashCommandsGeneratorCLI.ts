@@ -151,14 +151,14 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         switch (type) {
             case 3: // STRING
                 if (await this.yesNoInput("Autocomplete ? ")) option.autocomplete = true;
-                option.min_length = await this.optionalNumber("Min length: ");
-                option.max_length = await this.optionalNumber("Max Length: ");
+                option.min_length = await this.optionalNumber("Min length (0-6000): ", {integer: true, min: 0, max: 6000});
+                option.max_length = await this.optionalNumber("Max Length (1-6000): ", {integer: true, min: 1, max: 6000});
                 if (!option.autocomplete) option.choices = await this.addChoices(type);
                 break;
 
             case 4: case 10: // INTEGER/NUMBER
-                option.min_value = await this.optionalNumber("Min value: ");
-                option.max_value = await this.optionalNumber("Max value: ");
+                option.min_value = await this.optionalNumber("Min value: ", {integer: type === 4});
+                option.max_value = await this.optionalNumber("Max value: ", {integer: type === 4});
                 option.choices = await this.addChoices(type);
                 break;
 
@@ -168,9 +168,16 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         }
     }
 
-    private async optionalNumber(prompt: string): Promise<number | undefined> {
-        const input = await this.prompt(prompt);
-        return input.trim() ? parseFloat(input) : undefined;
+    private async optionalNumber(prompt: string, rules: { integer?: boolean, min?: number, max?: number } = {}): Promise<number | undefined> {
+        const input = await this.requireInput(prompt, val => {
+            if (!val.trim()) return true;
+            const num = Number(val);
+            return Number.isFinite(num)
+                && (!rules.integer || Number.isSafeInteger(num))
+                && (rules.min === undefined || num >= rules.min)
+                && (rules.max === undefined || num <= rules.max);
+        }, true);
+        return input.trim() ? Number(input) : undefined;
     }
 
     static isValidChoiceValue(type: DiscordOptionType, value: string): boolean {

@@ -41,3 +41,14 @@ describe("SlashCommandGeneratorCLI choices", () => {
         assert.deepEqual(await generator.addChoices(DiscordOptionType.STRING), [{name: "One", value: "1"}]);
     });
 });
+
+describe("SlashCommandGeneratorCLI.optionalNumber", () => {
+    it("asks again until the value is a valid number", async () => {
+        const generator = scripted(["abc", "1.5", "-1", "7000", "12"]);
+        assert.equal(await generator.optionalNumber("Min length: ", {integer: true, min: 0, max: 6000}), 12);
+    });
+
+    it("returns undefined when left empty", async () => {
+        assert.equal(await scripted([""]).optionalNumber("Min value: "), undefined);
+    });
+});
