@@ -20,6 +20,7 @@ const state = {
 
 const KIND_LABELS = {commands: "slash command", context_menu: "context menu"};
 let builder;
+let editor; // The builder of the editor window
 
 // ---- Log ----
 
@@ -125,7 +126,7 @@ function localColumns() {
         nameColumn, typeColumn, descriptionColumn, permissionsColumn,
         {label: "Status", value: localStatus},
         {label: "File", class: "mono", value: row => row.filename},
-        {label: "", value: row => h("button", {type: "button", class: "ghost small", onclick: () => openBuilder(row.filename)}, "Edit")},
+        {label: "", value: row => h("button", {type: "button", class: "ghost small", onclick: () => openEditor(row.filename)}, "Edit")},
     ];
 }
 
@@ -339,6 +340,37 @@ function openBuilder(filename) {
     builder.open(state.kind, filename);
 }
 
+// ---- Editor window ----
+
+function openEditor(filename) {
+    const dialog = $("#editor");
+    $("#editor-title").textContent = `Edit ${filename}`;
+    dialog.classList.remove("closing");
+    dialog.showModal();
+    editor.open(state.kind, filename);
+}
+
+// Refused while the changes are unsaved, as in the builder: its bar flashes instead
+function closeEditor() {
+    const dialog = $("#editor");
+    if (!dialog.open || dialog.classList.contains("closing") || !editor.canLeave()) return;
+    dialog.classList.add("closing"); // The opening animation reversed, then closed
+}
+
+function bindEditor() {
+    const dialog = $("#editor");
+    $("#editor-close").addEventListener("click", closeEditor);
+    // Escape, and a click on the backdrop (the dialog itself, outside of its content)
+    dialog.addEventListener("cancel", event => { event.preventDefault(); closeEditor(); });
+    dialog.addEventListener("click", event => { if (event.target === dialog) closeEditor(); });
+    dialog.addEventListener("animationend", event => {
+        if (event.target !== dialog || event.animationName !== "editor-out") return;
+        dialog.classList.remove("closing");
+        dialog.close();
+        refresh();
+    });
+}
+
 // Opens a view of a type of interaction, unless the builder has unsaved changes
 function navigate(kind, view) {
     if ((kind === state.kind && view === state.view) || !canLeaveBuilder()) return;
@@ -388,7 +420,7 @@ function bindNavigation() {
     });
     $("#refresh").addEventListener("click", refresh);
     window.addEventListener("beforeunload", event => {
-        if (state.view === "builder" && builder?.isDirty()) event.preventDefault();
+        if ((state.view === "builder" && builder?.isDirty()) || ($("#editor").open && editor?.isDirty())) event.preventDefault();
     });
     $("#clear-log").addEventListener("click", () => replace($("#log")));
     $("#details-close").addEventListener("click", () => { $("#details").hidden = true; });
@@ -419,8 +451,18 @@ async function start() {
         guilds: state.guilds,
         folders: state.app.folders,
         onSaved: () => log("info", "Saved: deploy or update it from the Manage view"),
-
     });
+    editor = new Builder($("#editor-body"), {
+        meta: state.meta,
+        guilds: state.guilds,
+        folders: state.app.folders,
+        showNew: false,
+        onSaved: filename => {
+            log("info", `${filename} saved: update it on Discord to apply the changes`);
+            refresh();
+        },
+    });
+    bindEditor();
     await refresh();
 }
 

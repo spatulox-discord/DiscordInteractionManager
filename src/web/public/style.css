@@ -69,7 +69,7 @@ h2 { font-size: 14px; }
 p { margin: 0; }
 .muted { color: var(--muted); font-weight: 400; }
 .mono { font-family: var(--mono); font-size: 12.5px; }
-.hint { color: var(--muted); font-size: 12.5px; }
+.hint { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 
 /* ---- Sidebar, as in the Discord settings ---- */
@@ -264,6 +264,50 @@ dialog {
 dialog::backdrop { background: rgb(0 0 0 / .4); }
 dialog .actions { justify-content: flex-end; margin-top: 16px; }
 
+/* ---- Editor window, over the content next to the sidebar ---- */
+
+.editor-modal {
+    position: fixed;
+    inset: auto;
+    top: 6vh;
+    left: calc(var(--sidebar-width) + (100vw - var(--sidebar-width)) * .1);
+    width: calc((100vw - var(--sidebar-width)) * .8);
+    height: 88vh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    display: none;
+    flex-direction: column;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgb(0 0 0 / .45);
+    animation: editor-in .18s ease-out;
+}
+.editor-modal[open] { display: flex; }
+.editor-modal::backdrop { background: rgb(0 0 0 / .6); animation: backdrop-in .18s ease-out; }
+.editor-modal.closing { animation: editor-out .18s ease-in forwards; }
+.editor-modal.closing::backdrop { animation: backdrop-out .18s ease-in forwards; }
+@keyframes editor-in { from { opacity: 0; transform: scale(1.04); } }
+@keyframes editor-out { to { opacity: 0; transform: scale(1.04); } }
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes backdrop-out { to { opacity: 0; } }
+
+.editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px 14px 24px;
+    border-bottom: 1px solid var(--border);
+}
+.editor-head h2 { font-size: 16px; overflow-wrap: anywhere; }
+button.close { border-radius: 50%; width: 34px; height: 34px; padding: 0; }
+/* Scrolls under the header; the unsaved bar stays at the bottom of the window */
+.editor-body { flex: 1; overflow: auto; padding: 20px 24px; }
+.editor-modal .unsaved-bar { position: absolute; left: 50%; width: min(720px, calc(100% - 32px)); }
+
 /* ---- Builder ---- */
 
 /* Shown while the builder has unsaved changes, as in the Discord settings */
@@ -297,7 +341,8 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
     40%, 80% { transform: translateX(calc(-50% + 8px)); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .unsaved-bar, .unsaved-bar.alert { animation: none; }
+    .unsaved-bar, .unsaved-bar.alert, .editor-modal, .editor-modal::backdrop { animation: none; }
+    .editor-modal.closing { animation: editor-out 1ms forwards; }
     /* Still an animation, since the bar is hidden when it ends */
     .unsaved-bar.leaving { animation: bar-out 1ms forwards; }
 }
@@ -335,6 +380,8 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
     .option-fields { grid-template-columns: 1fr; }
     main { padding: 12px; }
     :root { --sidebar-width: 0px; }
+    .editor-modal { top: 0; left: 0; width: 100vw; height: 100vh; border-radius: 0; border: 0; }
+    .editor-body { padding: 12px; }
     .layout { grid-template-columns: minmax(0, 1fr); }
     .sidebar { position: static; height: auto; gap: 12px; padding: 12px; border-right: 0; border-bottom: 1px solid var(--border); }
     .nav { grid-template-columns: 1fr 1fr; gap: 12px; }
