@@ -207,7 +207,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             if (!await this.yesNoInput("Another choice ? ")) break;
         }
         if(choices.length >= 25){
-            console.log("You can't have 25+ choices")
+            console.log("Maximum of 25 choices reached")
         }
         return choices;
     }
