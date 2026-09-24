@@ -15,17 +15,11 @@
         <img src="icon.svg" alt="" width="28" height="28">
         <span>Discord Interaction Manager</span>
     </div>
-    <!-- Each type of interaction has both views, as the categories of the Discord settings -->
-    <nav class="nav" aria-label="Sections">
+    <nav class="nav" aria-label="Interactions">
         <div class="nav-group">
-            <h2 class="nav-title">Slash commands</h2>
-            <button type="button" class="nav-item" data-kind="commands" data-view="manage">Manage</button>
-            <button type="button" class="nav-item" data-kind="commands" data-view="builder">Builder</button>
-        </div>
-        <div class="nav-group">
-            <h2 class="nav-title">Context menus</h2>
-            <button type="button" class="nav-item" data-kind="context_menu" data-view="manage">Manage</button>
-            <button type="button" class="nav-item" data-kind="context_menu" data-view="builder">Builder</button>
+            <h2 class="nav-title">Interactions</h2>
+            <button type="button" class="nav-item" data-kind="commands">Slash commands</button>
+            <button type="button" class="nav-item" data-kind="context_menu">Context menus</button>
         </div>
     </nav>
     <p id="bot" class="bot">Connecting…</p>
@@ -37,7 +31,7 @@
 </header>
 
 <main>
-    <section id="manage-view" hidden>
+    <section id="interactions-view">
         <div class="toolbar">
             <div class="segmented" role="radiogroup" aria-label="Scope">
                 <button type="button" data-scope="global">Global</button>
@@ -68,8 +62,6 @@
         </section>
     </section>
 
-    <section id="builder-view" hidden></section>
-
     <section class="panel log-panel">
         <div class="panel-head">
             <h2>Log</h2>
@@ -89,7 +81,7 @@
     <pre id="details-body" class="mono"></pre>
 </aside>
 
-<!-- Edits a local file over the page, as the settings of Discord -->
+<!-- Creates or edits a local file over the page, as the settings of Discord -->
 <dialog id="editor" class="editor-modal" aria-labelledby="editor-title">
     <div class="editor-head">
         <h2 id="editor-title">Edit</h2>

@@ -7,7 +7,6 @@ const state = {
     meta: null,
     guilds: [],
     kind: "commands",
-    view: "manage",
     scope: "global",
     guildId: "",
     localMode: "targeting", // or "addable": guild files that do not target the guild yet
@@ -19,7 +18,6 @@ const state = {
 };
 
 const KIND_LABELS = {commands: "slash command", context_menu: "context menu"};
-let builder;
 let editor; // The builder of the editor window
 
 // ---- Log ----
@@ -194,7 +192,7 @@ function renderActions() {
         localActions.push(button(state.scope === "all" ? `Update in all their guilds${count(toUpdate)}` : `Update${count(toUpdate)}`, () => update(toUpdate), {disabled: !toUpdate.length}));
         localActions.push(button(`Delete file${count(removable)}`, () => deleteFiles(removable), {disabled: !removable.length, tone: "ghost"}));
     }
-    localActions.push(button(`New ${KIND_LABELS[state.kind]}`, () => openBuilder(null), {tone: "ghost"}));
+    localActions.push(button(`New ${KIND_LABELS[state.kind]}`, () => openEditor(null), {tone: "ghost"}));
     replace($("#local-actions"), localActions);
 
     const remoteActions = [];
@@ -332,25 +330,19 @@ async function countPerGuild() {
 // ---- Navigation ----
 
 const KIND_TITLES = {commands: "Slash commands", context_menu: "Context menus"};
-const VIEW_TITLES = {manage: "Manage", builder: "Builder"};
-
-function openBuilder(filename) {
-    state.view = "builder";
-    renderNavigation();
-    builder.open(state.kind, filename);
-}
 
 // ---- Editor window ----
 
+// Edits a local file, or creates one without filename
 function openEditor(filename) {
     const dialog = $("#editor");
-    $("#editor-title").textContent = `Edit ${filename}`;
+    $("#editor-title").textContent = filename ? `Edit ${filename}` : `New ${KIND_LABELS[state.kind]}`;
     dialog.classList.remove("closing");
     dialog.showModal();
     editor.open(state.kind, filename);
 }
 
-// Refused while the changes are unsaved, as in the builder: its bar flashes instead
+// Refused while the changes are unsaved: the bar flashes instead
 function closeEditor() {
     const dialog = $("#editor");
     if (!dialog.open || dialog.classList.contains("closing") || !editor.canLeave()) return;
@@ -371,39 +363,28 @@ function bindEditor() {
     });
 }
 
-// Opens a view of a type of interaction, unless the builder has unsaved changes
-function navigate(kind, view) {
-    if ((kind === state.kind && view === state.view) || !canLeaveBuilder()) return;
-    if (kind !== state.kind) {
-        state.selectedLocal.clear();
-        state.selectedRemote.clear();
-    }
+function navigate(kind) {
+    if (kind === state.kind) return;
     state.kind = kind;
-    state.view = view;
+    state.selectedLocal.clear();
+    state.selectedRemote.clear();
     renderNavigation();
-    if (view === "builder") builder.open(kind, null); else refresh();
+    refresh();
 }
 
 function renderNavigation() {
     for (const item of $$(".nav-item")) {
-        const current = item.dataset.kind === state.kind && item.dataset.view === state.view;
+        const current = item.dataset.kind === state.kind;
         item.classList.toggle("active", current);
         if (current) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
     }
-    $("#page-title").textContent = `${KIND_TITLES[state.kind]} › ${VIEW_TITLES[state.view]}`;
+    $("#page-title").textContent = KIND_TITLES[state.kind];
     $$("[data-scope]").forEach(tab => tab.classList.toggle("active", tab.dataset.scope === state.scope));
-    $("#manage-view").hidden = state.view !== "manage";
-    $("#builder-view").hidden = state.view !== "builder";
     $(".guild-picker").hidden = state.scope !== "guild";
 }
 
-// The builder keeps its unsaved changes: leaving it is refused until they are saved or reset
-function canLeaveBuilder() {
-    return state.view !== "builder" || !builder || builder.canLeave();
-}
-
 function bindNavigation() {
-    $$(".nav-item").forEach(item => item.addEventListener("click", () => navigate(item.dataset.kind, item.dataset.view)));
+    $$(".nav-item").forEach(item => item.addEventListener("click", () => navigate(item.dataset.kind)));
     $$("[data-scope]").forEach(tab => tab.addEventListener("click", () => {
         state.scope = tab.dataset.scope;
         state.localMode = "targeting";
@@ -420,7 +401,7 @@ function bindNavigation() {
     });
     $("#refresh").addEventListener("click", refresh);
     window.addEventListener("beforeunload", event => {
-        if ((state.view === "builder" && builder?.isDirty()) || ($("#editor").open && editor?.isDirty())) event.preventDefault();
+        if ($("#editor").open && editor?.isDirty()) event.preventDefault();
     });
     $("#clear-log").addEventListener("click", () => replace($("#log")));
     $("#details-close").addEventListener("click", () => { $("#details").hidden = true; });
@@ -446,19 +427,14 @@ async function start() {
     replace($("#guild-select"), h("option", {value: ""}, "Choose a guild"),
         state.guilds.map(guild => h("option", {value: guild.id}, `${guild.name} (${guild.id})`)));
 
-    builder = new Builder($("#builder-view"), {
-        meta: state.meta,
-        guilds: state.guilds,
-        folders: state.app.folders,
-        onSaved: () => log("info", "Saved: deploy or update it from the Manage view"),
-    });
     editor = new Builder($("#editor-body"), {
         meta: state.meta,
         guilds: state.guilds,
         folders: state.app.folders,
-        showNew: false,
         onSaved: filename => {
-            log("info", `${filename} saved: update it on Discord to apply the changes`);
+            // A new file is then edited like the others
+            $("#editor-title").textContent = `Edit ${filename}`;
+            log("info", `${filename} saved: deploy or update it on Discord to apply it`);
             refresh();
         },
     });

@@ -88,7 +88,7 @@ npx dim web
 It opens your browser on a local page (or use "Open Web UI" in the menu of the CLI) where you can :
 - List the local files and the interactions deployed on Discord, in the Global, Guild or All guilds scope, and see their details
 - Deploy, update and delete them (with the same rules as the CLI, and a confirmation naming them)
-- Create interaction files with a visual builder, and edit them in a window over the list ("Edit") : permissions, contexts, scope and guilds, options and subcommands, choices, with a live JSON preview. The file is checked before it is saved, and each error shows the path of its field (e.g. `options[0].choices[1].value`). As in the Discord settings, a bar at the bottom shows the unsaved changes (Save Changes, Reset), and the builder cannot be left until they are saved or reset
+- Create ("New slash command", "New context menu") and edit ("Edit") interaction files in a window over the list, with a visual builder : permissions, contexts, scope and guilds, options and subcommands, choices, with a live JSON preview. The file is checked before it is saved, and each error shows the path of its field (e.g. `options[0].choices[1].value`). As in the Discord settings, a bar at the bottom shows the unsaved changes (Save Changes, Reset), and the window cannot be closed until they are saved or reset
 
 Options :
 - `--port <port>` : port of the page (default `3789`, a free one is used when it is taken)

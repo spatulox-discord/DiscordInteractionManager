@@ -128,9 +128,9 @@ p { margin: 0; }
 .page-head h1 { font-size: 20px; }
 
 main { max-width: 1400px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
-#manage-view { display: grid; gap: 16px; }
+#interactions-view { display: grid; gap: 16px; }
 /* Wide tables scroll inside their panel instead of widening the page */
-main > *, #manage-view > *, .builder > *, .builder-form > * { min-width: 0; }
+main > *, #interactions-view > *, .builder > *, .builder-form > * { min-width: 0; }
 .panel-head h2 .mono { overflow-wrap: anywhere; }
 
 /* ---- Controls ---- */
@@ -306,19 +306,17 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
 button.close { border-radius: 50%; width: 34px; height: 34px; padding: 0; }
 /* Scrolls under the header; the unsaved bar stays at the bottom of the window */
 .editor-body { flex: 1; overflow: auto; padding: 20px 24px; }
-.editor-modal .unsaved-bar { position: absolute; left: 50%; width: min(720px, calc(100% - 32px)); }
 
 /* ---- Builder ---- */
 
-/* Shown while the builder has unsaved changes, as in the Discord settings */
+/* Shown at the bottom of the editor window while it has unsaved changes, as in the Discord settings */
 .unsaved-bar {
-    position: fixed;
+    position: absolute;
     bottom: 20px;
-    /* Centered on the page, next to the sidebar */
-    left: calc(50% + var(--sidebar-width) / 2);
+    left: 50%;
     z-index: 20;
     transform: translateX(-50%);
-    width: min(720px, calc(100% - var(--sidebar-width) - 32px));
+    width: min(720px, calc(100% - 32px));
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -384,7 +382,8 @@ button.close { border-radius: 50%; width: 34px; height: 34px; padding: 0; }
     .editor-body { padding: 12px; }
     .layout { grid-template-columns: minmax(0, 1fr); }
     .sidebar { position: static; height: auto; gap: 12px; padding: 12px; border-right: 0; border-bottom: 1px solid var(--border); }
-    .nav { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .nav-group { grid-template-columns: 1fr 1fr; }
+    .nav-title { grid-column: 1 / -1; }
     .page-head { padding: 14px 12px 0; }
     .log li { grid-template-columns: auto 1fr; }
     .log time { display: none; }

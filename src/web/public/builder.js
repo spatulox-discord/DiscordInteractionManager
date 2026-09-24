@@ -24,16 +24,12 @@ function allowedTypes(parent, others, allTypes) {
  * Creates and edits interaction files. The fields it does not know (e.g. localizations) are kept as they are.
  */
 export class Builder {
-    /**
-     * @param showNew false in the editor window, which only edits the file it opened
-     */
-    constructor(root, {meta, guilds, folders, onSaved, showNew = true}) {
+    constructor(root, {meta, guilds, folders, onSaved}) {
         this.root = root;
         this.meta = meta;
         this.guilds = guilds;
         this.folders = folders;
         this.onSaved = onSaved;
-        this.showNew = showNew;
         this.optionTypeNames = Object.fromEntries(meta.optionTypes.map(({name, value}) => [value, name]));
         this.allTypes = meta.optionTypes.map(({value}) => value);
         this.permissionFilter = "";
@@ -246,12 +242,7 @@ export class Builder {
                 ),
                 h("aside", {class: "builder-side"},
                     h("div", {class: "panel sticky"},
-                        h("div", {class: "panel-head"},
-                            h("h2", {}, "Preview"),
-                            this.showNew ? h("div", {class: "actions"},
-                                h("button", {type: "button", class: "ghost", onclick: () => { if (this.canLeave()) this.open(this.kind, null); }}, "New"),
-                            ) : null,
-                        ),
+                        h("div", {class: "panel-head"}, h("h2", {}, "Preview")),
                         this.errorsBox = h("ul", {class: "errors"}),
                         this.previewBox = h("pre", {class: "preview mono"}),
                     ),
@@ -440,9 +431,9 @@ export class Builder {
                     return this.checkbox(`${guild.name}${isDeployed ? " (deployed)" : ""}`, guild.id in cmd.id, checked => {
                         if (checked) cmd.id[guild.id] = null; else delete cmd.id[guild.id];
                         this.refreshSide();
-                    }, {disabled: isDeployed, title: isDeployed ? "Delete it from this guild in the Manage view first" : guild.id});
+                    }, {disabled: isDeployed, title: isDeployed ? "Delete it from this guild first (Guild scope of the list)" : guild.id});
                 })),
-                h("span", {class: "hint"}, "Checked guilds stay pending until you deploy them from the Manage view (Guild scope)"),
+                h("span", {class: "hint"}, "Checked guilds stay pending until you deploy them from the Guild scope of the list"),
             );
         }
         return this.section("Scope", scopes, guilds);
