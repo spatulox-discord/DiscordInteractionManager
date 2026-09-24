@@ -67,13 +67,14 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
 
 
     protected async optionalGuildIds(): Promise<SpecificCommandId | undefined> {
-        const input = await this.prompt("Guild IDs (separated by comma, or 'none' to cancel): ");
-        return input.trim() && input.toLowerCase() !== 'none'
-            ? Object.fromEntries(
-                input.split(',').map(id => id.trim()).filter(DiscordRegex.GUILD_ID.test.bind(DiscordRegex.GUILD_ID))
-                    .map(id => [id, null])
-            )
-            : undefined;
+        const isCancel = (val: string) => !val.trim() || val.trim().toLowerCase() === 'none';
+        const input = await this.requireInput(
+            "Guild IDs (separated by comma, or 'none' to cancel): ",
+            val => isCancel(val) || val.split(',').every(id => DiscordRegex.GUILD_ID.test(id.trim())),
+            true
+        );
+        if (isCancel(input)) return undefined;
+        return Object.fromEntries(input.split(',').map(id => [id.trim(), null]));
     }
 
     protected async context(): Promise<InteractionContextType[]> {

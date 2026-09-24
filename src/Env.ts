@@ -19,7 +19,7 @@ export const Env = {
         if (!token) throw new Error('Missing environment variable : DISCORD_BOT_CLIENTID');
 
         if(!DiscordRegex.BOT_ID.test(token)){
-            throw new Error("Invalid token format")
+            throw new Error('Invalid environment variable : DISCORD_BOT_CLIENTID must be a Discord ID')
         }
 
         return token;
