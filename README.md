@@ -150,6 +150,8 @@ Options:
 ## Delete an interation
 > - You can delete any interaction, in any scope**
 
+> - The CLI names the selected interactions and asks for a confirmation (`Delete ping, ban globally? (y/n)`) before deleting anything
+
 Key:
 * *Folder at the root of your project, if not, make sure you didn't overwrite the path with the DISCORD_INTERACTION_FOLDER variable
 * **Scope refer to "global" or "guild specific"
