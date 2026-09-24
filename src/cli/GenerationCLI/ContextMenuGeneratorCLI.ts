@@ -52,7 +52,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         console.clear();
         console.log("💬 5/7 - Integration Type");
         const int_type = await this.integration_context()
-        if(ctx.length > 0){
+        if(int_type.length > 0){
             config.integration_types = int_type
         }
 
