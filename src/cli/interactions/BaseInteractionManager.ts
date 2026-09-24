@@ -31,7 +31,7 @@ export abstract class BaseInteractionManager {
         return await rest.get(Routes.currentApplication()) as RESTGetCurrentApplicationResult;
     }
 
-    async printInteraction(cmdList: Interaction[]): Promise<void> {
+    printInteraction(cmdList: Interaction[]): void {
         console.table(
             cmdList.map((cmd: Interaction) => ({
                 Nom: cmd.name,
@@ -134,7 +134,7 @@ export abstract class BaseInteractionManager {
             }
 
             console.log(`${commandList.length} local ${this.folderPath}(s) found\n`);
-            await this.printInteraction(commandList);
+            this.printInteraction(commandList);
             return commandList;
         } catch (error) {
             Log.error(`${(error as Error).message}`);
@@ -161,7 +161,7 @@ export abstract class BaseInteractionManager {
 
             if(printResult) {
                 console.log(`${commandList.length} ${this.folderPath}(s) found\n`);
-                await this.printInteraction(commandList);
+                this.printInteraction(commandList);
             }
 
             return commandList;

@@ -53,9 +53,9 @@ export class InteractionListManagerCLI extends BaseCLI {
         let cmd2 = await this.manager.listGuild(guild.id, false)
 
         console.log("Global Command")
-        await this.manager.printInteraction(cmd)
+        this.manager.printInteraction(cmd)
         console.log("Specific Command to this guild")
-        await this.manager.printInteraction(cmd2)
+        this.manager.printInteraction(cmd2)
     }
 
     protected async guildCountAllRemote(): Promise<void> {

@@ -4,9 +4,9 @@ import {Log} from "./Log";
 
 export class FileManager {
     /**
-     * Reads a JSON file synchronously.
+     * Reads and parses a JSON file, logging the error on failure.
      * @param filePath Full path to the JSON file
-     * @returns Parsed JSON object or 'Error' string on failure
+     * @returns Parsed JSON object or false on failure
      */
     static async readJsonFile(filePath: string): Promise<any | false> {
         try {
