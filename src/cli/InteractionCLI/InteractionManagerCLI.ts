@@ -50,6 +50,10 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
             await this.listRemote()
         } else {
             guild = await new GuildListManager(Env.clientId, Env.token).chooseGuild()
+            if(!guild){
+                console.log("Error, cannot find guild")
+                return
+            }
             await this.guildListRemote(guild);
         }
         console.log('═'.repeat(80));

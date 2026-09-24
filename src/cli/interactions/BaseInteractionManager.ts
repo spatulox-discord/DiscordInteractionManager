@@ -389,25 +389,20 @@ export abstract class BaseInteractionManager {
                     }
                     // 2b: Guild-specific command
                     else if (cmd.id && cmd.command_scope === "guild") {
-                        const updatePromises: Promise<any>[] = [];
+                        const deployed = Object.entries(cmd.id)
+                            .filter((entry): entry is [string, string] => !!entry[1]);
+                        const results = await Promise.allSettled(deployed.map(([guildId, commandId]) =>
+                            this.rest.patch(Routes.applicationGuildCommand(this.clientId, guildId, commandId), {body})
+                        ));
 
-                        for (const [guildId, commandId] of Object.entries(cmd.id)) {
-                            const guildResp = await this.rest.get(Routes.guild(guildId)) as Guild | null;
-                            if (!guildResp) {
-                                console.error(`Impossible to select guild with ${guildId}`);
-                                continue;
+                        results.forEach((result, index) => {
+                            const guildId = deployed[index]![0];
+                            if (result.status === "fulfilled") {
+                                console.log(`${cmd.name} updated in guild ${guildId}`);
+                            } else {
+                                Log.error(`${cmd.name}: Guild ${guildId}: ${(result.reason as Error).message}`);
                             }
-                            if(commandId)
-                            updatePromises.push(
-                                this.rest.patch(Routes.applicationGuildCommand(this.clientId, guildId, commandId), {
-                                    body
-                                }).then(() => {
-                                    console.log(`${cmd.name} updated in guild ${guildResp.name} ${guildId}`);
-                                })
-                            );
-                        }
-
-                        await Promise.allSettled(updatePromises);
+                        });
                     }
                 }
 

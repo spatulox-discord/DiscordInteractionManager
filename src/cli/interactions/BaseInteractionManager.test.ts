@@ -82,4 +82,20 @@ describe("BaseInteractionManager.update", () => {
         assert.deepEqual(calls.map(c => c.method), ["patch", "patch"]);
         assert.equal((await readCommand("pong.json")).description, "New pong");
     });
+
+    it("updates every guild even when one of them fails", async () => {
+        const local = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": "c2", "333": null}};
+        await writeCommand("ping.json", local);
+        const {manager, calls} = createManager(({route}) => {
+            if (route.includes("/guilds/111/")) throw new Error("Missing Access");
+            return {};
+        });
+
+        await manager.update([{...local, filename: "ping.json"} as any], null);
+
+        assert.deepEqual(calls.map(c => `${c.method} ${c.route}`), [
+            "patch /applications/123456789012345678/guilds/111/commands/c1",
+            "patch /applications/123456789012345678/guilds/222/commands/c2",
+        ]);
+    });
 });
