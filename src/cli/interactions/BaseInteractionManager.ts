@@ -170,7 +170,7 @@ export abstract class BaseInteractionManager {
         } catch (error) {
             const errorMsg = scope === 'global'
                 ? `Error: ${(error as Error).message}`
-                : `Guild error ${scope}: ${(error as Error).message}`;
+                : `Guild error ${guildId}: ${(error as Error).message}`;
             Log.error(errorMsg);
             return [];
         }
