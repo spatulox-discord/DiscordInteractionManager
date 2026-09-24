@@ -210,6 +210,26 @@ describe("BaseInteractionManager.listPerGuild", () => {
     });
 });
 
+describe("BaseInteractionManager.countPerGuild", () => {
+    it("counts the global and guild commands available in each guild", async () => {
+        const remote: Record<string, unknown[]> = {
+            commands: [{id: C1, type: 1, name: "ping", description: "d"}, {id: C4, type: 3, name: "Report"}],
+            [G1]: [{id: C2, type: 1, name: "here", description: "d", guild_id: G1}],
+            [G2]: [],
+        };
+        const {manager} = createManager(({route}) => remote[route.split("/")[4] ?? "commands"]);
+        mock.method(console, "log", () => {});
+        const table = mock.method(console, "table", () => {});
+
+        await manager.countPerGuild([guild(G1), guild(G2)]);
+
+        assert.deepEqual(table.mock.calls[0]!.arguments[0], [
+            {"Guild": `Guild ${G1} (${G1})`, "Global Commands": 1, "Specific Commands": 1, "Total": 2},
+            {"Guild": `Guild ${G2} (${G2})`, "Global Commands": 1, "Specific Commands": 0, "Total": 1},
+        ]);
+    });
+});
+
 describe("BaseInteractionManager.update", () => {
     it("keeps updating the next commands when one has no local file", async () => {
         const pong = {name: "pong", type: 1, description: "Pong", command_scope: "global", id: C2};

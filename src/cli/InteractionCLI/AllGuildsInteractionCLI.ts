@@ -15,7 +15,7 @@ export class AllGuildsInteractionCLI extends ScopeInteractionCLI {
 
     protected readonly menuSelection: MenuSelectionCLI = [
         { label: `List guild ${this.manager.folderPath} deployed per guild`, action: () => this.listPerGuild() },
-        { label: `Count ${this.manager.folderPath} per guild`, action: async () => this.manager.listAllGuilds(await this.guildSelector().list(false)) },
+        { label: `Count ${this.manager.folderPath} per guild`, action: async () => this.manager.countPerGuild(await this.guildSelector().list(false)) },
         { label: "Update in all their guilds", action: () => this.handleUpdateAll() },
         { label: "Delete from all guilds", action: () => this.handleDeleteAll() },
         { label: 'Back', action: () => this.goBack() },

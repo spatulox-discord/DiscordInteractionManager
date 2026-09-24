@@ -224,39 +224,28 @@ export abstract class BaseInteractionManager {
         );
     }
 
-    async listAllGuilds(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<{ guild: string; globalCommands: Interaction[], guildCommands: Interaction[] }[]> {
-        console.log("📡 Getting all guilds...\n");
-        console.log(`📋 ${guilds.length} guild(s) found\n`);
+    /**
+     * Prints, for each guild, how many global and guild interactions are available in it.
+     */
+    async countPerGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<void> {
+        if (!guilds.length) {
+            console.log("No guild found");
+            return;
+        }
+        console.log(`📡 Counting the ${this.folderPath} of ${guilds.length} guild(s)...\n`);
 
-        if (!guilds.length) return [];
+        // list and listGuild log their own errors and return an empty list
+        const globalCount = (await this.list(false)).length;
+        const guildCounts = await Promise.all(guilds.map(async guild => (await this.listGuild(guild.id, false)).length));
 
-        const globalCommands = await this.list(false)
-
-        // listGuild logs its own errors and returns an empty list
-        const guildCommandPromises = guilds.map(async (guild: RESTAPIPartialCurrentUserGuild) => {
-            const guildCommands = await this.listGuild(guild.id, false)
-            return {
-                guild: `${guild.name} (${guild.id})`,
-                guildId: guild.id,
-                globalCommands: globalCommands,
-                guildCommands: guildCommands,
-                count: guildCommands.length + globalCommands.length
-            };
-        });
-
-        const results = await Promise.all(guildCommandPromises);
-
-        const interactionTypeTitle = this.folderPath ? (this.folderPath?.toUpperCase() ) : "INTERACTION"
-        const interactionTypeDesc = this.folderPath ? (this.folderPath?.charAt(0).toUpperCase() + this.folderPath?.slice(1) ) : " Interactions"
-        console.log(`📊 ${interactionTypeTitle} PER GUILD :`);
-        console.table(results.map(r => ({
-            "Guild": r.guild,
-            ["Global " + interactionTypeDesc]: r.globalCommands.length,
-            ["Specific " + interactionTypeDesc]: r.guildCommands.length,
-            "Total": r.count
+        const label = this.folderPath.charAt(0).toUpperCase() + this.folderPath.slice(1);
+        console.log(`📊 ${this.folderPath.toUpperCase()} PER GUILD :`);
+        console.table(guilds.map((guild, index) => ({
+            "Guild": `${guild.name} (${guild.id})`,
+            [`Global ${label}`]: globalCount,
+            [`Specific ${label}`]: guildCounts[index],
+            "Total": globalCount + guildCounts[index]!,
         })));
-
-        return results.filter(r => r.count > 0);
     }
 
 
