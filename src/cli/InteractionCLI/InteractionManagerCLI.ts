@@ -4,6 +4,7 @@ import {BaseInteractionManager} from "../interactions/BaseInteractionManager";
 import {InteractionListManagerCLI} from "./InteractionListManagerCLI";
 import {Interaction} from "../type/InteractionType";
 import {Listing} from "../enum/Listing";
+import {Utils} from "../utils/Utils";
 
 export class InteractionManagerCLI extends InteractionListManagerCLI {
 
@@ -77,19 +78,16 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
             return [];
         }
 
-        const input = await this.input.ask('Enter numbers (sperated by a comma, or "all" or "exit"): ');
-        if (input.toLowerCase() === 'all') return commands;
-        if (input.toLowerCase() === 'exit') return [];
+        const input = (await this.input.ask('Enter numbers (separated by a comma, or "all" or "exit"): ')).trim().toLowerCase();
+        if (input === 'all') return commands;
+        if (input === 'exit') return [];
 
-        const indices = input.split(',').map(i => parseInt(i.trim())).filter(i => !isNaN(i));
-        const selected = indices
-            .map(i => commands[i])
-            .filter((cmd): cmd is Interaction => cmd !== undefined);
-
-        if (selected.length === 0) {
+        const indices = Utils.parseIndexList(input);
+        if (!indices || indices.some(i => i >= commands.length)) {
             console.log('Invalid number');
             return [];
         }
+        const selected = indices.map(i => commands[i]!);
 
         console.log(`${selected.length} selected ${handlerManagerType}`);
         return selected;
