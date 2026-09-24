@@ -154,6 +154,8 @@ Options:
 
 > - The CLI names the selected interactions and asks for a confirmation (`Delete ping, ban globally? (y/n)`) before deleting anything
 
+> - An interaction already deleted on Discord (from the Developer Portal, by another tool or by the bot itself) has its ID removed from the local file when you delete or update it, so it can be deployed again
+
 Key:
 * *Folder at the root of your project, if not, make sure you didn't overwrite the path with the DISCORD_INTERACTION_FOLDER variable
 * **Scope refer to "global" or "guild specific"

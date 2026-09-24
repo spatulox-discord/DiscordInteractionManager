@@ -1,4 +1,4 @@
-import {REST} from '@discordjs/rest';
+import {DiscordAPIError, REST} from '@discordjs/rest';
 import {
     RESTAPIPartialCurrentUserGuild,
     RESTGetCurrentApplicationResult,
@@ -355,7 +355,12 @@ export abstract class BaseInteractionManager {
                     IDList.push(commandId);
                     console.log(`${cmd.name} deleted ${guildId ? `in guild ${guild?.name ?? guildId}` : "globally"}`);
                 } catch (error) {
-                    Log.error(`${cmd.name}${guildId ? ` (guild ${guildId})` : ""}: ${(error as Error).message}`);
+                    if (BaseInteractionManager.isGone(error)) {
+                        IDList.push(commandId);
+                        Log.warn(`${cmd.name}${guildId ? ` (guild ${guildId})` : ""}: already deleted on Discord, its ID is removed from the local file`);
+                    } else {
+                        Log.error(`${cmd.name}${guildId ? ` (guild ${guildId})` : ""}: ${(error as Error).message}`);
+                    }
                 }
             }
         }
@@ -366,6 +371,7 @@ export abstract class BaseInteractionManager {
 
     async update(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         console.log(`Updating ${commands.length} ${this.folderPath}(s)...`);
+        const goneIds: string[] = [];
 
         for (const cmd of commands) {
             if (!cmd.id) {
@@ -394,18 +400,14 @@ export abstract class BaseInteractionManager {
                         continue;
                     }
 
-                    await this.rest.patch(Routes.applicationGuildCommand(this.clientId, guild.id, commandId), {
-                        body
-                    });
+                    if (!await this.patch(Routes.applicationGuildCommand(this.clientId, guild.id, commandId), body, cmd.name, commandId, goneIds)) continue;
                     console.log(`${cmd.name} updated in guild ${guild.name} ${guild.id}`);
                 }
                 // Case 2: Global / All Specific guilds
                 else {
                     // 2a: Global command
                     if (cmd.command_scope === "global") {
-                        await this.rest.patch(Routes.applicationCommand(this.clientId, cmd.id), {
-                            body
-                        });
+                        if (!await this.patch(Routes.applicationCommand(this.clientId, cmd.id), body, cmd.name, cmd.id, goneIds)) continue;
                         console.log(`${cmd.name} updated globally`);
                     }
                     // 2b: Guild-specific command
@@ -417,9 +419,12 @@ export abstract class BaseInteractionManager {
                         ));
 
                         results.forEach((result, index) => {
-                            const guildId = deployed[index]![0];
+                            const [guildId, commandId] = deployed[index]!;
                             if (result.status === "fulfilled") {
                                 console.log(`${cmd.name} updated in guild ${guildId}`);
+                            } else if (BaseInteractionManager.isGone(result.reason)) {
+                                goneIds.push(commandId);
+                                Log.warn(`${cmd.name}: Guild ${guildId}: already deleted on Discord, its ID is removed from the local file`);
                             } else {
                                 Log.error(`${cmd.name}: Guild ${guildId}: ${(result.reason as Error).message}`);
                             }
@@ -445,6 +450,33 @@ export abstract class BaseInteractionManager {
             } catch (error) {
                 Log.error(`${cmd.name}: ${(error as Error).message}`);
             }
+        }
+        if (goneIds.length > 0) {
+            await this.removeLocalIdFromFile(goneIds);
+        }
+    }
+
+    /**
+     * Discord answers 404 when the interaction, or its guild, no longer exists
+     * (deleted from the Developer Portal, by another tool or by the bot itself).
+     * Its local ID can then be removed, or the file would stay deployed forever.
+     */
+    private static isGone(error: unknown): boolean {
+        return error instanceof DiscordAPIError && error.status === 404;
+    }
+
+    /**
+     * @returns false when the interaction no longer exists on Discord: its ID is added to goneIds
+     */
+    private async patch(route: `/${string}`, body: Record<string, unknown>, name: string, commandId: string, goneIds: string[]): Promise<boolean> {
+        try {
+            await this.rest.patch(route, {body});
+            return true;
+        } catch (error) {
+            if (!BaseInteractionManager.isGone(error)) throw error;
+            goneIds.push(commandId);
+            Log.warn(`${name}: already deleted on Discord, its ID is removed from the local file`);
+            return false;
         }
     }
 

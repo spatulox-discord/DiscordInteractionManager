@@ -1,3 +1,4 @@
+import {DiscordAPIError} from "@discordjs/rest";
 import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
 import {afterEach, beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
@@ -27,6 +28,9 @@ function createManager(handler: RestHandler = () => ({})) {
 }
 
 const guild = (id: string) => ({id, name: `Guild ${id}`}) as RESTAPIPartialCurrentUserGuild;
+
+// What Discord answers for an interaction deleted outside of the CLI
+const unknownCommand = () => new DiscordAPIError({code: 10063, message: "Unknown application command"}, 10063, 404, "PATCH", "/", {});
 
 let folder: string;
 
@@ -73,6 +77,18 @@ describe("BaseInteractionManager.delete", () => {
 
         assert.equal(error.mock.callCount(), 0);
         assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+    });
+
+    it("removes the local ID of an interaction already deleted on Discord", async () => {
+        await writeCommand("ping.json", local);
+        const {manager} = createManager(() => { throw unknownCommand(); });
+        mock.method(console, "log", () => {});
+        const warn = mock.method(console, "warn", () => {});
+
+        await manager.delete([remote], guild(G1));
+
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+        assert.match(String(warn.mock.calls[0]!.arguments[0]), /already deleted on Discord/);
     });
 
     it("only clears the ID of the guild it was deleted from", async () => {
@@ -272,6 +288,36 @@ describe("BaseInteractionManager.update", () => {
 
         assert.deepEqual((calls[0]!.body as any).options, []);
         assert.equal((calls[0]!.body as any).default_member_permissions, null);
+    });
+
+    it("removes the ID of a global command already deleted on Discord", async () => {
+        const ping = {name: "ping", type: 1, description: "Ping", command_scope: "global", id: C1};
+        await writeCommand("ping.json", ping);
+        const {manager} = createManager(() => { throw unknownCommand(); });
+        mock.method(console, "log", () => {});
+        mock.method(console, "warn", () => {});
+
+        await manager.update([{...ping, filename: "ping.json"} as any], null);
+
+        assert.equal("id" in await readCommand("ping.json"), false);
+    });
+
+    it("removes the ID of the guilds where the command was already deleted", async () => {
+        const local = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {[G1]: C1, [G2]: C2}};
+        await writeCommand("ping.json", local);
+        const {manager} = createManager(({route}) => {
+            if (route.includes(`/guilds/${G1}/`)) throw unknownCommand();
+            return {};
+        });
+        mock.method(console, "log", () => {});
+        mock.method(console, "warn", () => {});
+
+        await manager.update([{...local, filename: "ping.json"} as any], null);
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+
+        await writeCommand("ping.json", local);
+        await manager.update([{...local, id: {[G1]: C1}, filename: "ping.json"} as any], guild(G1));
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
     });
 
     it("updates every guild even when one of them fails", async () => {
