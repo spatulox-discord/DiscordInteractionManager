@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {CommandManager} from "./InteractionManager";
-import {Listing} from "../enum/Listing";
+import {ALL_GUILDS, Listing} from "../enum/Listing";
 
 type RestCall = { method: string; route: string; body?: unknown };
 type RestHandler = (call: RestCall) => unknown;
@@ -141,6 +141,49 @@ describe("BaseInteractionManager.deploy", () => {
     });
 });
 
+describe("BaseInteractionManager.delete in every guild", () => {
+    it("deletes a guild command from every guild it is deployed in", async () => {
+        const local = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": "c2", "333": null}};
+        await writeCommand("ping.json", local);
+        const {manager, calls} = createManager(({route}) => {
+            if (route.includes("/guilds/222/")) throw new Error("Missing Access");
+            return {};
+        });
+        mock.method(console, "log", () => {});
+        mock.method(console, "error", () => {});
+
+        await manager.delete([local as any], null);
+
+        assert.deepEqual(calls.map(c => `${c.method} ${c.route}`), [
+            "delete /applications/123456789012345678/guilds/111/commands/c1",
+            "delete /applications/123456789012345678/guilds/222/commands/c2",
+        ]);
+        assert.deepEqual((await readCommand("ping.json")).id, {"111": null, "222": "c2", "333": null});
+    });
+});
+
+describe("BaseInteractionManager.listPerGuild", () => {
+    it("merges the guild commands of every guild and finds their local file", async () => {
+        await writeCommand("ping_file.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1"}});
+        await writeCommand("global.json", {name: "other", type: 1, description: "d", command_scope: "global"});
+        const remote: Record<string, unknown[]> = {
+            "111": [{id: "c1", type: 1, name: "ping", description: "Ping", guild_id: "111"}],
+            "222": [
+                {id: "c2", type: 1, name: "ping", description: "Ping", guild_id: "222"},
+                {id: "c3", type: 1, name: "other", description: "d", guild_id: "222"},
+            ],
+        };
+        const {manager} = createManager(({route}) => remote[route.split("/")[4]!]);
+
+        const commands = await manager.listPerGuild([guild("111"), guild("222")]);
+
+        assert.deepEqual(commands.map(c => [c.name, c.id, c.filename]), [
+            ["ping", {"111": "c1", "222": "c2"}, "ping_file.json"],
+            ["other", {"222": "c3"}, undefined],
+        ]);
+    });
+});
+
 describe("BaseInteractionManager.update", () => {
     it("keeps updating the next commands when one has no local file", async () => {
         const pong = {name: "pong", type: 1, description: "Pong", command_scope: "global", id: "c2"};
@@ -221,6 +264,19 @@ describe("BaseInteractionManager.listFromFile", () => {
         assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["pending"]);
         assert.deepEqual((await manager.listFromFile(Listing.DEPLOYED)).map(c => c.name), ["deployed"]);
         assert.deepEqual((await manager.listFromFile(Listing.ALL)).map(c => c.name).sort(), ["deployed", "pending"]);
+    });
+
+    it("lists the guild commands deployed in any guild", async () => {
+        await writeCommand("global.json", {name: "global", type: 1, description: "d", command_scope: "global", id: "c1"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {"111": "c2", "222": null}});
+        await writeCommand("pending.json", {name: "pending", type: 1, description: "d", command_scope: "guild", id: {"111": null}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        const commands = await manager.listFromFile(Listing.DEPLOYED, ALL_GUILDS);
+
+        assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
     });
 
     it("lists the local files of a guild", async () => {
