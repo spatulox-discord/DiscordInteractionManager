@@ -5,6 +5,8 @@ import {
     Choice,
     CommandOption,
     DiscordOptionType,
+    InteractionContextType,
+    InteractionIntegrationType,
     SlashCommandConfigGenerator
 } from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
@@ -47,14 +49,14 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
         console.clear();
         console.log("💬 3/7 - Context");
-        const ctx = await this.context()
+        const ctx = await this.selectEnumValues<InteractionContextType>("Contexts", InteractionContextType)
         if(ctx.length > 0){
             config.contexts = ctx
         }
 
         console.clear();
         console.log("💬 4/7 - Integration Type");
-        const int_type = await this.integration_context()
+        const int_type = await this.selectEnumValues<InteractionIntegrationType>("Integration types", InteractionIntegrationType)
         if(int_type.length > 0){
             config.integration_types = int_type
         }

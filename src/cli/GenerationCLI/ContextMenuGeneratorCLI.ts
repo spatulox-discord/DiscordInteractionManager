@@ -1,5 +1,5 @@
 import {MenuSelectionCLI} from "../BaseCLI";
-import {ContextMenuConfigGenerator} from "../type/InteractionType";
+import {ContextMenuConfigGenerator, InteractionContextType, InteractionIntegrationType} from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
 import {FolderName} from "../../type/FolderName";
 
@@ -37,14 +37,14 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
 
         console.clear();
         console.log("💬 3/6 - Context");
-        const ctx = await this.context()
+        const ctx = await this.selectEnumValues<InteractionContextType>("Contexts", InteractionContextType)
         if(ctx.length > 0){
             config.contexts = ctx
         }
 
         console.clear();
         console.log("💬 4/6 - Integration Type");
-        const int_type = await this.integration_context()
+        const int_type = await this.selectEnumValues<InteractionIntegrationType>("Integration types", InteractionIntegrationType)
         if(int_type.length > 0){
             config.integration_types = int_type
         }

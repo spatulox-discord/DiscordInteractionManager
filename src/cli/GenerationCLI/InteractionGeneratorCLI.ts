@@ -2,8 +2,7 @@ import {BaseCLI} from "../BaseCLI";
 import {DiscordRegex} from "../../utils/DiscordRegex";
 import {
     ContextMenuConfigGenerator,
-    InteractionContextType,
-    InteractionIntegrationType, SlashCommandConfigGenerator,
+    SlashCommandConfigGenerator,
     SpecificCommandId
 } from "../type/InteractionType";
 import {Utils} from "../utils/Utils";
@@ -85,57 +84,23 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         return Object.fromEntries(input.split(',').map(id => [id.trim(), null]));
     }
 
-    protected async context(): Promise<InteractionContextType[]> {
+    /**
+     * Asks for values of a numeric enum (contexts, integration types).
+     * @returns an empty list when left empty, to keep Discord's default
+     */
+    protected async selectEnumValues<T extends number>(label: string, enumObject: Record<string, string | number>): Promise<T[]> {
+        const entries = Object.entries(enumObject).filter((entry): entry is [string, number] => typeof entry[1] === 'number');
+        const values = entries.map(([, value]) => value);
+        const choices = entries.map(([key, value]) => `${value}=${key}`).join(', ');
 
-        const enumValues = Object.values(InteractionContextType)
-            .filter((v): v is InteractionContextType => typeof v === 'number');
+        const input = (await this.input.requireInput(
+            `${label} (${choices}) separated by commas, "all", or leave empty for Discord's default: `,
+            val => !val.trim() || val.trim().toLowerCase() === "all" || (Utils.parseIndexList(val)?.every(n => values.includes(n)) ?? false),
+            true
+        )).trim().toLowerCase();
 
-        const enumKeys = Object.keys(InteractionContextType).filter(
-            key => isNaN(Number(key))
-        );
-        const contextChoices = enumKeys
-            .map((key, index) => `${index}=${key}`)
-            .join(', ');
-
-        const input = await this.input.requireInput(
-            `Enter context indices (${contextChoices}) separated by commas: `,
-            (val) => {
-                if (val.trim().toLowerCase() === "all") return true;
-                return Utils.parseIndexList(val)?.every(n => enumValues.includes(n)) ?? false;
-            }
-        );
-
-        if (input.trim().toLowerCase() === 'all') {
-            return enumValues;
-        }
-
-        return Utils.parseIndexList(input) as InteractionContextType[];
-    }
-
-    protected async integration_context(): Promise<InteractionIntegrationType[]> {
-
-        const enumValues = Object.values(InteractionIntegrationType)
-            .filter((v): v is InteractionIntegrationType => typeof v === 'number');
-
-        const enumKeys = Object.keys(InteractionIntegrationType).filter(
-            key => isNaN(Number(key))
-        );
-        const contextChoices = enumKeys
-            .map((key, index) => `${index}=${key}`)
-            .join(', ');
-
-        const input = await this.input.requireInput(
-            `Enter integration context indices (${contextChoices}) separated by commas: `,
-            (val) => {
-                if (val.trim().toLowerCase() === "all") return true;
-                return Utils.parseIndexList(val)?.every(n => enumValues.includes(n)) ?? false;
-            }
-        );
-
-        if (input.trim().toLowerCase() === 'all') {
-            return enumValues;
-        }
-
-        return Utils.parseIndexList(input) as InteractionIntegrationType[];
+        if (!input) return [];
+        if (input === 'all') return values as T[];
+        return Utils.parseIndexList(input) as T[];
     }
 }

@@ -1,7 +1,7 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
-import {CommandOption, DiscordOptionType} from "../type/InteractionType";
+import {CommandOption, DiscordOptionType, InteractionContextType} from "../type/InteractionType";
 
 function scripted(answers: string[]): any {
     const generator = new SlashCommandGeneratorCLI();
@@ -141,6 +141,24 @@ describe("InteractionGeneratorCLI index lists", () => {
     it("asks again when a channel type is not an integer", async () => {
         const answers = ["0x", "0,2,0"];
         assert.deepEqual(await scripted(answers).addChannelTypes(), [0, 2]);
+        assert.deepEqual(answers, []);
+    });
+});
+
+describe("InteractionGeneratorCLI.selectEnumValues", () => {
+    const select = (answers: string[]) => scripted(answers).selectEnumValues("Contexts", InteractionContextType);
+
+    it("keeps Discord's default when left empty", async () => {
+        assert.deepEqual(await select([""]), []);
+    });
+
+    it("selects every value with all", async () => {
+        assert.deepEqual(await select([" All "]), [0, 1, 2]);
+    });
+
+    it("asks again for unknown values", async () => {
+        const answers = ["3", "2,0"];
+        assert.deepEqual(await select(answers), [2, 0]);
         assert.deepEqual(answers, []);
     });
 });
