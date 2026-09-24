@@ -8,6 +8,7 @@ import {
     SlashCommandConfigGenerator
 } from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
+import {Utils} from "../utils/Utils";
 
 export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     protected getTitle(): string {
@@ -227,17 +228,14 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
                 const trimmed = val.trim().toLowerCase();
                 if (trimmed === 'all') return true;
 
-                return val.split(',').every(i => {
-                    const num = parseInt(i.trim());
-                    return !isNaN(num) && Object.values(ChannelType).includes(num);
-                });
+                return Utils.parseIndexList(val)?.every(num => Object.values(ChannelType).includes(num)) ?? false;
             },
             true
         );
 
         if (!input.trim() || input.trim().toLowerCase() === 'all') return undefined;
 
-        return input.split(',').map(i => parseInt(i.trim()));
+        return Utils.parseIndexList(input)!;
     }
 
 }

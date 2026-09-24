@@ -57,31 +57,17 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         const input = await this.input.requireInput(
             "Permission numbers (comma-separated, 'everyone', or leave empty): ",
             (val) => {
-                if (!val.trim() || val.toLowerCase() === 'everyone') return true;
-
-                return val.split(',').every(numStr => {
-                    const num = parseInt(numStr.trim());
-                    return num >= 0 && num < permEntries.length && !isNaN(num);
-                });
+                if (!val.trim() || val.trim().toLowerCase() === 'everyone') return true;
+                return Utils.parseIndexList(val)?.every(num => num < permEntries.length) ?? false;
             },
             true
         );
 
-        if (!input.trim() || input.toLowerCase() === 'everyone') {
-            //config.default_member_permissions_string = [];
-            //config.default_member_permissions = 0n;
+        if (!input.trim() || input.trim().toLowerCase() === 'everyone') {
             return;
         }
 
-        const selectedNums = input.split(',').map(n => parseInt(n.trim()));
-        const selectedPermNames: string[] = [];
-
-        for (const i of selectedNums) {
-            const entry = permEntries[i];
-            if (entry) {
-                selectedPermNames.push(entry[0]);
-            }
-        }
+        const selectedPermNames = Utils.parseIndexList(input)!.map(i => permEntries[i]![0]);
 
         config.default_member_permissions_string = selectedPermNames;
         config.default_member_permissions = Utils.permissionsToBitfield(selectedPermNames);
@@ -114,16 +100,8 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         const input = await this.input.requireInput(
             `Enter context indices (${contextChoices}) separated by commas: `,
             (val) => {
-                if (!val) return false;
                 if (val.trim().toLowerCase() === "all") return true;
-                const nums = val
-                    .split(',')
-                    .map(v => parseInt(v.trim(), 10))
-                    .filter(v => !isNaN(v));
-
-                if (nums.length === 0) return false;
-
-                return nums.every(n => enumValues.includes(n));
+                return Utils.parseIndexList(val)?.every(n => enumValues.includes(n)) ?? false;
             }
         );
 
@@ -131,13 +109,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             return enumValues;
         }
 
-        const numbers = input
-            .split(',')
-            .map(v => parseInt(v.trim(), 10))
-            .filter(v => !isNaN(v) && enumValues.includes(v));
-
-        // Enlever les doublons et convertir en enum
-        return Array.from(new Set(numbers)) as InteractionContextType[];
+        return Utils.parseIndexList(input) as InteractionContextType[];
     }
 
     protected async integration_context(): Promise<InteractionIntegrationType[]> {
@@ -155,16 +127,8 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         const input = await this.input.requireInput(
             `Enter integration context indices (${contextChoices}) separated by commas: `,
             (val) => {
-                if (!val) return false;
                 if (val.trim().toLowerCase() === "all") return true;
-                const nums = val
-                    .split(',')
-                    .map(v => parseInt(v.trim(), 10))
-                    .filter(v => !isNaN(v));
-
-                if (nums.length === 0) return false;
-
-                return nums.every(n => enumValues.includes(n));
+                return Utils.parseIndexList(val)?.every(n => enumValues.includes(n)) ?? false;
             }
         );
 
@@ -172,12 +136,6 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             return enumValues;
         }
 
-        const numbers = input
-            .split(',')
-            .map(v => parseInt(v.trim(), 10))
-            .filter(v => !isNaN(v) && enumValues.includes(v));
-
-        // Enlever les doublons et convertir en enum
-        return Array.from(new Set(numbers)) as InteractionIntegrationType[];
+        return Utils.parseIndexList(input) as InteractionIntegrationType[];
     }
 }

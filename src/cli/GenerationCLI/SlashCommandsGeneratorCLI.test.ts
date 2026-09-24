@@ -95,3 +95,19 @@ describe("SlashCommandGeneratorCLI options rules", () => {
         }]);
     });
 });
+
+describe("InteractionGeneratorCLI index lists", () => {
+    it("asks again when a permission number is not an integer", async () => {
+        const config: any = {};
+        const answers = ["1abc", "0, 0"];
+        await scripted(answers).addPermissions(config);
+        assert.deepEqual(answers, []);
+        assert.equal(config.default_member_permissions_string.length, 1);
+    });
+
+    it("asks again when a channel type is not an integer", async () => {
+        const answers = ["0x", "0,2,0"];
+        assert.deepEqual(await scripted(answers).addChannelTypes(), [0, 2]);
+        assert.deepEqual(answers, []);
+    });
+});
