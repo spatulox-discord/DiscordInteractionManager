@@ -16,14 +16,4 @@ export class Log {
     static error(message: string): void {
     console.error(`${this.getPrefix('error')} ${message}`);
 }
-
-    static debug(message: string): void {
-    console.debug(`${this.getPrefix('debug')} ${message}`);
-}
-
-    static table(data: Record<string, any>[]): void {
-    const prefix = this.getPrefix('table');
-    console.info(`${prefix} Table output:`);
-    console.table(data);
-}
 }

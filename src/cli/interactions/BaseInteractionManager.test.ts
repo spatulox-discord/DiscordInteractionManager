@@ -69,6 +69,52 @@ describe("BaseInteractionManager.delete", () => {
     });
 });
 
+describe("BaseInteractionManager.deploy", () => {
+    beforeEach(() => {
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        mock.method(console, "error", () => {});
+    });
+
+    it("saves the ID of a global command", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+        const {manager, calls} = createManager(() => ({id: "c1"}));
+
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL));
+
+        assert.deepEqual(calls.map(c => `${c.method} ${c.route}`), ["post /applications/123456789012345678/commands"]);
+        const saved = await readCommand("ping.json");
+        assert.equal(saved.id, "c1");
+        assert.equal("filename" in saved, false);
+    });
+
+    it("only deploys to the pending guilds and keeps the failed ones pending", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": null, "333": null}});
+        const {manager, calls} = createManager(({route}) => {
+            if (route.includes("/guilds/333/")) throw new Error("Missing Access");
+            return {id: "c2"};
+        });
+
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL));
+
+        assert.deepEqual(calls.map(c => c.route), [
+            "/applications/123456789012345678/guilds/222/commands",
+            "/applications/123456789012345678/guilds/333/commands",
+        ]);
+        assert.deepEqual((await readCommand("ping.json")).id, {"111": "c1", "222": "c2", "333": null});
+    });
+
+    it("saves the bitfield matching the permission names", async () => {
+        await writeCommand("ban.json", {name: "ban", type: 1, description: "Ban", command_scope: "global", default_member_permissions: "8", default_member_permissions_string: ["BanMembers"]});
+        const {manager, calls} = createManager(() => ({id: "c1"}));
+
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL));
+
+        assert.equal((calls[0]!.body as any).default_member_permissions, "4");
+        assert.equal((await readCommand("ban.json")).default_member_permissions, "4");
+    });
+});
+
 describe("BaseInteractionManager.update", () => {
     it("keeps updating the next commands when one has no local file", async () => {
         const pong = {name: "pong", type: 1, description: "Pong", command_scope: "global", id: "c2"};
@@ -82,6 +128,17 @@ describe("BaseInteractionManager.update", () => {
 
         assert.deepEqual(calls.map(c => c.method), ["patch", "patch"]);
         assert.equal((await readCommand("pong.json")).description, "New pong");
+    });
+
+    it("removes on Discord the options removed from the local file", async () => {
+        const ping = {name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"};
+        await writeCommand("ping.json", ping);
+        const {manager, calls} = createManager();
+
+        await manager.update([{...ping, filename: "ping.json"} as any], null);
+
+        assert.deepEqual((calls[0]!.body as any).options, []);
+        assert.equal((calls[0]!.body as any).default_member_permissions, null);
     });
 
     it("updates every guild even when one of them fails", async () => {
@@ -113,6 +170,32 @@ describe("BaseInteractionManager.listFromFile", () => {
         const commands = await manager.listFromFile(Listing.DEPLOYED, "111");
 
         assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
+    });
+
+    it("does not list guild commands deployed nowhere as deployed", async () => {
+        await writeCommand("pending.json", {name: "pending", type: 1, description: "d", command_scope: "guild", id: {"111": null}});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {"111": "c2", "222": null}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        const commands = await manager.listFromFile(Listing.DEPLOYED);
+
+        assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
+    });
+
+    it("reports an unreadable file once and skips it", async () => {
+        await fs.writeFile(path.join(folder, "commands", "broken.json"), "{");
+        await writeCommand("invalid.json", {name: "invalid", type: 9, command_scope: "global"});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        const error = mock.method(console, "error", () => {});
+
+        const commands = await manager.listFromFile(Listing.LOCAL);
+
+        assert.deepEqual(commands, []);
+        assert.equal(error.mock.callCount(), 2);
     });
 
     it("only skips files whose name starts with example", async () => {

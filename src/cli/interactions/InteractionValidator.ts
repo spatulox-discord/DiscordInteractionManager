@@ -19,6 +19,11 @@ export class InteractionValidator {
             throw new Error(`Expected SlashCommand (1) or ContextMenuCommand (2|3), got type ${cmd.type}`);
         }
 
+        const permissions = cmd.default_member_permissions_string;
+        if (permissions !== undefined && (!Array.isArray(permissions) || permissions.some(name => typeof name !== 'string'))) {
+            throw new Error(`Expected 'default_member_permissions_string' string[], got ${JSON.stringify(permissions)}`);
+        }
+
         if (cmd.command_scope === 'guild') {
             if (!cmd.id || typeof cmd.id !== 'object' || Array.isArray(cmd.id)) {
                 throw new Error(`Expected guild 'id' Record<string, string|null>, got ${typeof cmd.id}`);

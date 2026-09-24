@@ -19,12 +19,10 @@ export abstract class BaseInteractionManager {
     public abstract commandType: number[];
 
     protected clientId: string;
-    protected token: string;
     protected rest: REST;
 
     constructor(clientId: string, token: string) {
         this.clientId = clientId;
-        this.token = token;
         this.rest = new REST({ version: '10' }).setToken(token);
     }
 
@@ -33,14 +31,17 @@ export abstract class BaseInteractionManager {
         return await rest.get(Routes.currentApplication()) as RESTGetCurrentApplicationResult;
     }
 
-    async printInteraction(cmdList: Interaction[]): Promise<void> {
+    printInteraction(cmdList: Interaction[]): void {
         console.table(
             cmdList.map((cmd: Interaction) => ({
                 Nom: cmd.name,
                 Type: cmd.type === CommandType.SLASH ? 'Slash' :
                     cmd.type === CommandType.USER_CONTEXT_MENU ? 'User Context Menu' : 'Message Context Menu',
                 Description: 'description' in cmd ? cmd.description : 'N/A',
-                Permissions: Utils.bitfieldToPermissions(cmd.default_member_permissions).join(", "),
+                Permissions: (() => {
+                    const permissions = InteractionPayload.resolvePermissions(cmd);
+                    return permissions === "0" ? "Administrators only" : Utils.bitfieldToPermissions(permissions).join(", ");
+                })(),
                 ID: (() => {
                     if (!cmd.id) return 'N/A';
                     if (cmd.command_scope === "global") return cmd.id;
@@ -94,7 +95,8 @@ export abstract class BaseInteractionManager {
                             }
                         }
 
-                        cmd.id = Object.keys(newGuildIds).length > 0 ? newGuildIds : {};
+                        if (Object.keys(newGuildIds).length === 0) continue; // Not deployed in any guild
+                        cmd.id = newGuildIds;
                     }
 
                 }
@@ -132,7 +134,7 @@ export abstract class BaseInteractionManager {
             }
 
             console.log(`${commandList.length} local ${this.folderPath}(s) found\n`);
-            await this.printInteraction(commandList);
+            this.printInteraction(commandList);
             return commandList;
         } catch (error) {
             Log.error(`${(error as Error).message}`);
@@ -149,7 +151,7 @@ export abstract class BaseInteractionManager {
         printResult: boolean = true,
     ): Promise<Interaction[]> {
         const scopeLabel = scope === 'global' ? 'global' : `guild ${guildId}`;
-        console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
+        if (printResult) console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
 
         try {
             const rawCmds = await this.rest.get(endpoint) as any[];
@@ -159,14 +161,14 @@ export abstract class BaseInteractionManager {
 
             if(printResult) {
                 console.log(`${commandList.length} ${this.folderPath}(s) found\n`);
-                await this.printInteraction(commandList);
+                this.printInteraction(commandList);
             }
 
             return commandList;
         } catch (error) {
             const errorMsg = scope === 'global'
                 ? `Error: ${(error as Error).message}`
-                : `Guild error ${scope}: ${(error as Error).message}`;
+                : `Guild error ${guildId}: ${(error as Error).message}`;
             Log.error(errorMsg);
             return [];
         }
@@ -198,29 +200,16 @@ export abstract class BaseInteractionManager {
 
         const globalCommands = await this.list(false)
 
+        // listGuild logs its own errors and returns an empty list
         const guildCommandPromises = guilds.map(async (guild: RESTAPIPartialCurrentUserGuild) => {
-            try {
-
-                let guildCommands = await this.listGuild(guild.id, false)
-
-                const allCommands = [...guildCommands, ...globalCommands]
-                return {
-                    guild: `${guild.name} (${guild.id})`,
-                    guildId: guild.id,
-                    globalCommands: globalCommands,
-                    guildCommands: guildCommands,
-                    count: allCommands.length
-                };
-            } catch (error) {
-                console.error(`⚠️ Guild ${guild.id}: ${(error as Error).message}`);
-                return {
-                    guild: `${guild.name} (${guild.id})`,
-                    guildId: guild.id,
-                    globalCommands: globalCommands,
-                    guildCommands: [],
-                    count: 0
-                };
-            }
+            const guildCommands = await this.listGuild(guild.id, false)
+            return {
+                guild: `${guild.name} (${guild.id})`,
+                guildId: guild.id,
+                globalCommands: globalCommands,
+                guildCommands: guildCommands,
+                count: guildCommands.length + globalCommands.length
+            };
         });
 
         const results = await Promise.all(guildCommandPromises);
@@ -328,20 +317,14 @@ export abstract class BaseInteractionManager {
                 fileCmd = await this.readInteraction(filePath);
             }
 
-            if (cmd.default_member_permissions_string) {
-                cmd.default_member_permissions = Utils.permissionsToBitfield(cmd.default_member_permissions_string);
-            }
-            const body = InteractionPayload.toDiscord(cmd);
-
             try {
+                const body = InteractionPayload.toDiscordPatch(cmd);
+                this.syncPermissions(cmd, body);
+
                 // Case 1: Specific Guild
                 if (guild) {
-                    let commandId: string | undefined | null;
-                    if (cmd.command_scope === "global") {
-                        commandId = cmd.id;
-                    } else if (cmd.id && cmd.command_scope === "guild") {
-                        commandId = cmd.id[guild.id];
-                    }
+                    // A global command has no ID in a guild: it cannot be updated from here
+                    const commandId = cmd.command_scope === "guild" ? cmd.id[guild.id] : undefined;
 
                     if (!commandId) {
                         Log.error(`${cmd.name}: No command ID for guild ${guild.id}`);
@@ -407,9 +390,7 @@ export abstract class BaseInteractionManager {
             ? Object.keys(cmd.id).filter(guildId => cmd.id![guildId] == null)
             : [];
         const dataToSend = InteractionPayload.toDiscord(cmd);
-        if (Array.isArray(cmd.default_member_permissions_string) && dataToSend.default_member_permissions !== undefined) {
-            cmd.default_member_permissions = dataToSend.default_member_permissions as string;
-        }
+        this.syncPermissions(cmd, dataToSend);
 
         // Guild deployment
         if (cmd.command_scope == "guild") {
@@ -470,13 +451,21 @@ export abstract class BaseInteractionManager {
         return false
     }
 
-    private async readInteraction(filePath: string): Promise<Interaction | null> {
-        try {
-            const data = await FileManager.readJsonFile(filePath);
+    // Keep the saved bitfield in line with the permission names that were sent
+    private syncPermissions(cmd: Interaction, payload: Record<string, unknown>): void {
+        if (Array.isArray(cmd.default_member_permissions_string)) {
+            cmd.default_member_permissions = payload.default_member_permissions as string | null;
+        }
+    }
 
+    private async readInteraction(filePath: string): Promise<Interaction | null> {
+        const data = await FileManager.readJsonFile(filePath);
+        if (data === false) return null; // readJsonFile already logged why
+
+        try {
             return InteractionValidator.validate(data);
         } catch (error) {
-            console.error(`Error reading ${filePath}:`, error);
+            Log.error(`Invalid interaction file ${filePath}: ${(error as Error).message}`);
             return null;
         }
     }
@@ -522,7 +511,11 @@ export abstract class BaseInteractionManager {
             }
 
             if (hasDeletion) {
-                await this.saveInteraction(file, localCmd);
+                try {
+                    await this.saveInteraction(file, localCmd);
+                } catch (error) {
+                    Log.error(`${file}: the deleted ID could not be removed from the file: ${(error as Error).message}`);
+                }
             }
         }
 

@@ -1,7 +1,7 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
-import {CommandOption, DiscordOptionType} from "../type/InteractionType";
+import {CommandOption, DiscordOptionType, InteractionContextType} from "../type/InteractionType";
 
 function scripted(answers: string[]): any {
     const generator = new SlashCommandGeneratorCLI();
@@ -16,6 +16,20 @@ function scripted(answers: string[]): any {
 beforeEach(() => {
     mock.method(console, "log", () => {});
     mock.method(console, "clear", () => {});
+});
+
+describe("SlashCommandGeneratorCLI.isValidName", () => {
+    it("accepts lowercase unicode names", () => {
+        for (const name of ["ping", "liber-thé", "l'heure", "ping_2", "日本"]) {
+            assert.equal(SlashCommandGeneratorCLI.isValidName(name), true, name);
+        }
+    });
+
+    it("rejects uppercase, spaces and too long names", () => {
+        for (const name of ["", "Ping", "LIBER-THÉ", "my command", "a".repeat(33), "ping!"]) {
+            assert.equal(SlashCommandGeneratorCLI.isValidName(name), false, name);
+        }
+    });
 });
 
 describe("SlashCommandGeneratorCLI choices", () => {
@@ -50,6 +64,36 @@ describe("SlashCommandGeneratorCLI.optionalNumber", () => {
 
     it("returns undefined when left empty", async () => {
         assert.equal(await scripted([""]).optionalNumber("Min value: "), undefined);
+    });
+});
+
+describe("SlashCommandGeneratorCLI.handleOptionType", () => {
+    it("never accepts a maximum below the minimum", async () => {
+        const answers = ["n", "10", "5", "10", "n"];
+        const option: any = {};
+        await scripted(answers).handleOptionType(option, DiscordOptionType.STRING);
+        assert.deepEqual(answers, []);
+        assert.equal(option.min_length, 10);
+        assert.equal(option.max_length, 10);
+    });
+
+    it("never accepts a maximum value below the minimum value", async () => {
+        const answers = ["n", "-2", "-3", "-2", "n"];
+        const option: any = {};
+        await scripted(answers).handleOptionType(option, DiscordOptionType.INTEGER);
+        assert.deepEqual(answers, []);
+        assert.equal(option.max_value, -2);
+    });
+});
+
+describe("SlashCommandGeneratorCLI numeric autocomplete", () => {
+    it("offers autocomplete and then skips choices", async () => {
+        const answers = ["y", "", ""];
+        const option: any = {};
+        await scripted(answers).handleOptionType(option, DiscordOptionType.NUMBER);
+        assert.deepEqual(answers, []);
+        assert.equal(option.autocomplete, true);
+        assert.equal(option.choices, undefined);
     });
 });
 
@@ -93,5 +137,39 @@ describe("SlashCommandGeneratorCLI options rules", () => {
                 {type: 3, name: "a", description: "A", required: false},
             ],
         }]);
+    });
+});
+
+describe("InteractionGeneratorCLI index lists", () => {
+    it("asks again when a permission number is not an integer", async () => {
+        const config: any = {};
+        const answers = ["1abc", "0, 0"];
+        await scripted(answers).addPermissions(config);
+        assert.deepEqual(answers, []);
+        assert.equal(config.default_member_permissions_string.length, 1);
+    });
+
+    it("asks again when a channel type is not an integer", async () => {
+        const answers = ["0x", "0,2,0"];
+        assert.deepEqual(await scripted(answers).addChannelTypes(), [0, 2]);
+        assert.deepEqual(answers, []);
+    });
+});
+
+describe("InteractionGeneratorCLI.selectEnumValues", () => {
+    const select = (answers: string[]) => scripted(answers).selectEnumValues("Contexts", InteractionContextType);
+
+    it("keeps Discord's default when left empty", async () => {
+        assert.deepEqual(await select([""]), []);
+    });
+
+    it("selects every value with all", async () => {
+        assert.deepEqual(await select([" All "]), [0, 1, 2]);
+    });
+
+    it("asks again for unknown values", async () => {
+        const answers = ["3", "2,0"];
+        assert.deepEqual(await select(answers), [2, 0]);
+        assert.deepEqual(answers, []);
     });
 });

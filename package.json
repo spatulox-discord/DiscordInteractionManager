@@ -6,6 +6,12 @@
   "bin": {
     "dim": "dist/MainCLI.js"
   },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/spatulox-discord/DiscordInteractionManager.git"
@@ -17,6 +23,7 @@
     "type-check": "tsc --noEmit",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "build": "tsup",
+    "prepublishOnly": "npm run type-check && npm test && npm run build",
     "patch": "npm run build && npm version patch",
     "minor": "npm run build && npm version minor",
     "major": "npm run build && npm version major",

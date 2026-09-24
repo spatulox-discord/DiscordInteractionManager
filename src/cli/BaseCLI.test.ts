@@ -20,7 +20,9 @@ class ChildMenu extends BaseCLI {
     protected readonly menuSelection: MenuSelectionCLI = [
         {label: "Action", action: async () => { this.calls++; }},
         {label: "Back", action: () => this.goBack()},
+        {label: "Crash", action: async () => { throw new Error("boom"); }},
     ];
+    run() { return this.showMainMenu(); }
 }
 
 class ParentMenu extends BaseCLI {
@@ -40,6 +42,18 @@ describe("BaseCLI navigation", () => {
         await menu.run();
 
         assert.equal(menu.child.calls, 1);
+        assert.deepEqual(answers, []);
+    });
+
+    it("keeps the menu running when an action fails", async (t) => {
+        const error = t.mock.method(console, "error", () => {});
+        answers = ["3", "", "1", "", "2"];
+        const menu = new ChildMenu();
+
+        await menu.run();
+
+        assert.equal(menu.calls, 1);
+        assert.equal(error.mock.callCount(), 1);
         assert.deepEqual(answers, []);
     });
 

@@ -1,5 +1,5 @@
 import {MenuSelectionCLI} from "../BaseCLI";
-import {ContextMenuConfigGenerator} from "../type/InteractionType";
+import {ContextMenuConfigGenerator, InteractionContextType, InteractionIntegrationType} from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
 import {FolderName} from "../../type/FolderName";
 
@@ -16,48 +16,42 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
     protected async generate(): Promise<void> {
         const config: ContextMenuConfigGenerator = {
             command_scope: "global",
-            dm_permission: true,
             name: "",
             type: 2
         };
 
         // 1. Type & Nom
         console.clear();
-        console.log("🍽️ 1/7 - Menu Type");
+        console.log("🍽️ 1/6 - Menu Type");
         console.log("2 = User Menu | 3 = Message Menu");
         config.type = parseInt(await this.input.requireInput("Type (2 or 3): ", val => ["2", "3"].includes(val))) as 2 | 3;
 
         console.clear();
-        config.name = await this.input.requireInput("Name (1-32 chars): ", val => val.length >= 1 && val.length <= 32);
+        config.name = (await this.input.requireInput("Name (1-32 chars): ", val => val.trim().length >= 1 && val.trim().length <= 32)).trim();
         await this.nsfw(config)
 
         // 2. Permissions
         console.clear();
-        console.log("🔐 2/7 - Command Permissions");
+        console.log("🔐 2/6 - Command Permissions");
         await this.addPermissions(config);
 
-        // 3. DM
         console.clear();
-        console.log("💬 3/7 - DM Permissions");
-        config.dm_permission = await this.input.yesNoInput("Authorize in DM ? (y/n): ");
-
-        console.clear();
-        console.log("💬 4/7 - Context");
-        const ctx = await this.context()
+        console.log("💬 3/6 - Context");
+        const ctx = await this.selectEnumValues<InteractionContextType>("Contexts", InteractionContextType)
         if(ctx.length > 0){
             config.contexts = ctx
         }
 
         console.clear();
-        console.log("💬 5/7 - Integration Type");
-        const int_type = await this.integration_context()
+        console.log("💬 4/6 - Integration Type");
+        const int_type = await this.selectEnumValues<InteractionIntegrationType>("Integration types", InteractionIntegrationType)
         if(int_type.length > 0){
             config.integration_types = int_type
         }
 
-        // 4. Guild Specific
+        // 5. Guild Specific
         console.clear();
-        console.log("⚙️ 6/7 - Guild Specific");
+        console.log("⚙️ 5/6 - Guild Specific");
         if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
             const id = await this.optionalGuildIds();
             if(id) {
@@ -66,9 +60,9 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
             }
         }
 
-        // 5. Save
+        // 6. Save
         console.clear();
-        console.log("💾 7/7 - Save");
+        console.log("💾 6/6 - Save");
         return await this.save(FolderName.CONTEXT_MENU, config)
     }
 }

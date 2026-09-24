@@ -5,9 +5,13 @@ import {
     Choice,
     CommandOption,
     DiscordOptionType,
+    InteractionContextType,
+    InteractionIntegrationType,
     SlashCommandConfigGenerator
 } from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
+import {Utils} from "../utils/Utils";
+import {DiscordRegex} from "../../utils/DiscordRegex";
 
 export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     protected getTitle(): string {
@@ -25,14 +29,13 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             name: "",
             description: "",
             type: 1,
-            dm_permission: false
         };
 
         console.clear();
-        console.log("📝 1/8 - Base");
+        console.log("📝 1/7 - Base");
         config.name = await this.input.requireInput(
-            "Name (a-z0-9_-, 1-32 chars): ",
-            val => /^[a-z0-9_-]{1,32}$/.test(val)
+            "Name (lowercase letters, digits, - _ ', 1-32 chars): ",
+            SlashCommandGeneratorCLI.isValidName
         );
         config.description = await this.input.requireInput(
             "Description (1-100 chars): ",
@@ -41,36 +44,32 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         await this.nsfw(config)
 
         console.clear();
-        console.log("🔐 2/8 - Command Permissions");
+        console.log("🔐 2/7 - Command Permissions");
         await this.addPermissions(config);
 
         console.clear();
-        console.log("💬 3/8 - DM Permissions");
-        config.dm_permission = await this.input.yesNoInput("Authorize DM ? (y/n): ");
-
-        console.clear();
-        console.log("💬 4/8 - Context");
-        const ctx = await this.context()
+        console.log("💬 3/7 - Context");
+        const ctx = await this.selectEnumValues<InteractionContextType>("Contexts", InteractionContextType)
         if(ctx.length > 0){
             config.contexts = ctx
         }
 
         console.clear();
-        console.log("💬 5/8 - Integration Type");
-        const int_type = await this.integration_context()
+        console.log("💬 4/7 - Integration Type");
+        const int_type = await this.selectEnumValues<InteractionIntegrationType>("Integration types", InteractionIntegrationType)
         if(int_type.length > 0){
             config.integration_types = int_type
         }
 
         console.clear();
-        console.log("⚙️ 6/8 - Options/Subcommands");
+        console.log("⚙️ 5/7 - Options/Subcommands");
         const result = await this.addOptions();
         if(result.length > 0){
             config.options = result;
         }
 
         console.clear();
-        console.log("⚙️ 7/8 - Guild Specific");
+        console.log("⚙️ 6/7 - Guild Specific");
         if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
             const id = await this.optionalGuildIds();
             if(id) {
@@ -80,8 +79,12 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         }
 
         console.clear();
-        console.log("💾 8/8 - Save");
+        console.log("💾 7/7 - Save");
         return await this.save(FolderName.SLASH_COMMANDS, config)
+    }
+
+    static isValidName(name: string): boolean {
+        return DiscordRegex.COMMAND_NAME.test(name) && name === name.toLowerCase();
     }
 
     static allowedOptionTypes(parent: DiscordOptionType | undefined, siblings: CommandOption[]): DiscordOptionType[] {
@@ -134,8 +137,8 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
     private async buildOption(type: DiscordOptionType, usedNames: string[] = []): Promise<CommandOption> {
         const name = await this.input.requireInput(
-            "Option name (a-z0-9_-, 1-32, unique): ",
-            val => /^[a-z0-9_-]{1,32}$/.test(val) && !usedNames.includes(val)
+            "Option name (lowercase letters, digits, - _ ', 1-32, unique): ",
+            val => SlashCommandGeneratorCLI.isValidName(val) && !usedNames.includes(val)
         );
         const description = await this.input.requireInput(
             "Description (1-100): ",
@@ -156,20 +159,25 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
     private async handleOptionType(option: CommandOption, type: DiscordOptionType): Promise<void> {
         switch (type) {
-            case 3: // STRING
+            case DiscordOptionType.STRING:
                 if (await this.input.yesNoInput("Autocomplete ? ")) option.autocomplete = true;
                 option.min_length = await this.optionalNumber("Min length (0-6000): ", {integer: true, min: 0, max: 6000});
-                option.max_length = await this.optionalNumber("Max Length (1-6000): ", {integer: true, min: 1, max: 6000});
+                const minMaxLength = Math.max(1, option.min_length ?? 0);
+                option.max_length = await this.optionalNumber(`Max Length (${minMaxLength}-6000): `, {integer: true, min: minMaxLength, max: 6000});
                 if (!option.autocomplete) option.choices = await this.addChoices(type);
                 break;
 
-            case 4: case 10: // INTEGER/NUMBER
-                option.min_value = await this.optionalNumber("Min value: ", {integer: type === 4});
-                option.max_value = await this.optionalNumber("Max value: ", {integer: type === 4});
-                option.choices = await this.addChoices(type);
+            case DiscordOptionType.INTEGER: case DiscordOptionType.NUMBER:
+                if (await this.input.yesNoInput("Autocomplete ? ")) option.autocomplete = true;
+                option.min_value = await this.optionalNumber("Min value: ", {integer: type === DiscordOptionType.INTEGER});
+                option.max_value = await this.optionalNumber(
+                    option.min_value === undefined ? "Max value: " : `Max value (≥ ${option.min_value}): `,
+                    {integer: type === DiscordOptionType.INTEGER, min: option.min_value}
+                );
+                if (!option.autocomplete) option.choices = await this.addChoices(type);
                 break;
 
-            case 7: // CHANNEL
+            case DiscordOptionType.CHANNEL:
                 option.channel_types = await this.addChannelTypes();
                 break;
         }
@@ -227,17 +235,14 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
                 const trimmed = val.trim().toLowerCase();
                 if (trimmed === 'all') return true;
 
-                return val.split(',').every(i => {
-                    const num = parseInt(i.trim());
-                    return !isNaN(num) && Object.values(ChannelType).includes(num);
-                });
+                return Utils.parseIndexList(val)?.every(num => Object.values(ChannelType).includes(num)) ?? false;
             },
             true
         );
 
         if (!input.trim() || input.trim().toLowerCase() === 'all') return undefined;
 
-        return input.split(',').map(i => parseInt(i.trim()));
+        return Utils.parseIndexList(input)!;
     }
 
 }

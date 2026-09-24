@@ -39,3 +39,15 @@ describe("Utils.permissionEntries", () => {
         assert.equal(Utils.permissionsToBitfield(["ManageEmojisAndStickers"]), PermissionFlagsBits.ManageGuildExpressions.toString());
     });
 });
+
+describe("Utils.parseIndexList", () => {
+    it("parses unique indices", () => {
+        assert.deepEqual(Utils.parseIndexList("1, 3,1 "), [1, 3]);
+    });
+
+    it("rejects anything that is not a list of integers", () => {
+        for (const input of ["", "1,", "1abc", "1.5", "-1", "a"]) {
+            assert.equal(Utils.parseIndexList(input), null, input);
+        }
+    });
+});

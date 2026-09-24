@@ -2,8 +2,7 @@ import {BaseCLI} from "../BaseCLI";
 import {DiscordRegex} from "../../utils/DiscordRegex";
 import {
     ContextMenuConfigGenerator,
-    InteractionContextType,
-    InteractionIntegrationType, SlashCommandConfigGenerator,
+    SlashCommandConfigGenerator,
     SpecificCommandId
 } from "../type/InteractionType";
 import {Utils} from "../utils/Utils";
@@ -57,31 +56,17 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         const input = await this.input.requireInput(
             "Permission numbers (comma-separated, 'everyone', or leave empty): ",
             (val) => {
-                if (!val.trim() || val.toLowerCase() === 'everyone') return true;
-
-                return val.split(',').every(numStr => {
-                    const num = parseInt(numStr.trim());
-                    return num >= 0 && num < permEntries.length && !isNaN(num);
-                });
+                if (!val.trim() || val.trim().toLowerCase() === 'everyone') return true;
+                return Utils.parseIndexList(val)?.every(num => num < permEntries.length) ?? false;
             },
             true
         );
 
-        if (!input.trim() || input.toLowerCase() === 'everyone') {
-            //config.default_member_permissions_string = [];
-            //config.default_member_permissions = 0n;
+        if (!input.trim() || input.trim().toLowerCase() === 'everyone') {
             return;
         }
 
-        const selectedNums = input.split(',').map(n => parseInt(n.trim()));
-        const selectedPermNames: string[] = [];
-
-        for (const i of selectedNums) {
-            const entry = permEntries[i];
-            if (entry) {
-                selectedPermNames.push(entry[0]);
-            }
-        }
+        const selectedPermNames = Utils.parseIndexList(input)!.map(i => permEntries[i]![0]);
 
         config.default_member_permissions_string = selectedPermNames;
         config.default_member_permissions = Utils.permissionsToBitfield(selectedPermNames);
@@ -99,85 +84,23 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         return Object.fromEntries(input.split(',').map(id => [id.trim(), null]));
     }
 
-    protected async context(): Promise<InteractionContextType[]> {
+    /**
+     * Asks for values of a numeric enum (contexts, integration types).
+     * @returns an empty list when left empty, to keep Discord's default
+     */
+    protected async selectEnumValues<T extends number>(label: string, enumObject: Record<string, string | number>): Promise<T[]> {
+        const entries = Object.entries(enumObject).filter((entry): entry is [string, number] => typeof entry[1] === 'number');
+        const values = entries.map(([, value]) => value);
+        const choices = entries.map(([key, value]) => `${value}=${key}`).join(', ');
 
-        const enumValues = Object.values(InteractionContextType)
-            .filter((v): v is InteractionContextType => typeof v === 'number');
+        const input = (await this.input.requireInput(
+            `${label} (${choices}) separated by commas, "all", or leave empty for Discord's default: `,
+            val => !val.trim() || val.trim().toLowerCase() === "all" || (Utils.parseIndexList(val)?.every(n => values.includes(n)) ?? false),
+            true
+        )).trim().toLowerCase();
 
-        const enumKeys = Object.keys(InteractionContextType).filter(
-            key => isNaN(Number(key))
-        );
-        const contextChoices = enumKeys
-            .map((key, index) => `${index}=${key}`)
-            .join(', ');
-
-        const input = await this.input.requireInput(
-            `Enter context indices (${contextChoices}) separated by commas: `,
-            (val) => {
-                if (!val) return false;
-                if (val.trim().toLowerCase() === "all") return true;
-                const nums = val
-                    .split(',')
-                    .map(v => parseInt(v.trim(), 10))
-                    .filter(v => !isNaN(v));
-
-                if (nums.length === 0) return false;
-
-                return nums.every(n => enumValues.includes(n));
-            }
-        );
-
-        if (input.trim().toLowerCase() === 'all') {
-            return enumValues;
-        }
-
-        const numbers = input
-            .split(',')
-            .map(v => parseInt(v.trim(), 10))
-            .filter(v => !isNaN(v) && enumValues.includes(v));
-
-        // Enlever les doublons et convertir en enum
-        return Array.from(new Set(numbers)) as InteractionContextType[];
-    }
-
-    protected async integration_context(): Promise<InteractionIntegrationType[]> {
-
-        const enumValues = Object.values(InteractionIntegrationType)
-            .filter((v): v is InteractionIntegrationType => typeof v === 'number');
-
-        const enumKeys = Object.keys(InteractionIntegrationType).filter(
-            key => isNaN(Number(key))
-        );
-        const contextChoices = enumKeys
-            .map((key, index) => `${index}=${key}`)
-            .join(', ');
-
-        const input = await this.input.requireInput(
-            `Enter integration context indices (${contextChoices}) separated by commas: `,
-            (val) => {
-                if (!val) return false;
-                if (val.trim().toLowerCase() === "all") return true;
-                const nums = val
-                    .split(',')
-                    .map(v => parseInt(v.trim(), 10))
-                    .filter(v => !isNaN(v));
-
-                if (nums.length === 0) return false;
-
-                return nums.every(n => enumValues.includes(n));
-            }
-        );
-
-        if (input.trim().toLowerCase() === 'all') {
-            return enumValues;
-        }
-
-        const numbers = input
-            .split(',')
-            .map(v => parseInt(v.trim(), 10))
-            .filter(v => !isNaN(v) && enumValues.includes(v));
-
-        // Enlever les doublons et convertir en enum
-        return Array.from(new Set(numbers)) as InteractionIntegrationType[];
+        if (!input) return [];
+        if (input === 'all') return values as T[];
+        return Utils.parseIndexList(input) as T[];
     }
 }

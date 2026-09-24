@@ -4,9 +4,9 @@ import {Log} from "./Log";
 
 export class FileManager {
     /**
-     * Reads a JSON file synchronously.
+     * Reads and parses a JSON file, logging the error on failure.
      * @param filePath Full path to the JSON file
-     * @returns Parsed JSON object or 'Error' string on failure
+     * @returns Parsed JSON object or false on failure
      */
     static async readJsonFile(filePath: string): Promise<any | false> {
         try {
@@ -23,28 +23,19 @@ export class FileManager {
         return name !== '' && name !== '.' && name !== '..' && !/[\\/]/.test(name);
     }
 
+    /**
+     * Turns any text (e.g. an interaction name) into a filename that stays in its folder.
+     */
+    static toSafeFilename(name: string): string {
+        const safe = name.trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, '_');
+        return this.isSafeFilename(safe) ? safe : '_';
+    }
+
     static async fileExists(filePath: string): Promise<boolean> {
         try {
             await fs.access(filePath);
             return true;
         } catch {
-            return false;
-        }
-    }
-
-    /**
-     * Lists all directories in a given path.
-     * @param directoryPath Path to scan for directories
-     * @returns Array of directory names or false on error
-     */
-    static async listDirectories(directoryPath: string): Promise<string[] | false> {
-        try {
-            const files = await fs.readdir(directoryPath, { withFileTypes: true });
-            return files
-                .filter(file => file.isDirectory())
-                .map(dir => dir.name);
-        } catch (error) {
-            Log.error(`Failed to read directory ${directoryPath}: ${error}`);
             return false;
         }
     }
@@ -58,27 +49,6 @@ export class FileManager {
         try {
             const files = await fs.readdir(directoryPath);
             return files.filter(file => path.extname(file) === '.json');
-        } catch (error) {
-            Log.error(`Failed to read directory ${directoryPath}: ${error}`);
-            return false;
-        }
-    }
-
-    /**
-     * Lists files with specific extension in a directory.
-     * @param directoryPath Path to scan
-     * @param extension File extension (with or without dot)
-     * @returns Array of matching filenames or 'Error' string on failure
-     */
-    static async listFiles(directoryPath: string, extension: string): Promise<string[] | false> {
-        try {
-            let ext = extension;
-            if (ext.startsWith('.')) {
-                ext = ext.slice(1);
-            }
-
-            const files = await fs.readdir(directoryPath);
-            return files.filter(file => path.extname(file) === `.${ext}`);
         } catch (error) {
             Log.error(`Failed to read directory ${directoryPath}: ${error}`);
             return false;
