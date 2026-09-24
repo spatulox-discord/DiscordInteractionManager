@@ -117,9 +117,20 @@ describe("InteractionPayload.fromDiscord", () => {
 
         assert.deepEqual(InteractionPayload.fromDiscord(raw), {
             type: 1, name: "search", description: "Search", options, nsfw: true, contexts: [0],
-            dm_permission: true, default_member_permissions: null, default_member_permissions_string: [],
+            dm_permission: true, default_member_permissions: null,
             command_scope: "global", id: "c1",
         });
+    });
+
+    it("keeps the permission names", () => {
+        const raw = {...base, type: 1, name: "ban", description: "d", default_member_permissions: PermissionFlagsBits.BanMembers.toString()} as any;
+        assert.deepEqual(InteractionPayload.fromDiscord(raw).default_member_permissions_string, ["BanMembers"]);
+    });
+
+    it("lets the bitfield of a command usable by everyone be edited", () => {
+        const cmd = InteractionPayload.fromDiscord({...base, type: 1, name: "ping", description: "d"} as any);
+        cmd.default_member_permissions = "8";
+        assert.equal(InteractionPayload.toDiscord(cmd).default_member_permissions, "8");
     });
 
     it("keeps a permission unknown to discord-api-types after a round trip", () => {

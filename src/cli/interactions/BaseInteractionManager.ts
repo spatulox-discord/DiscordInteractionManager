@@ -548,9 +548,13 @@ export abstract class BaseInteractionManager {
 
     // Keep the saved bitfield in line with the permission names that were sent
     private syncPermissions(cmd: Interaction, payload: Record<string, unknown>): void {
-        if (Array.isArray(cmd.default_member_permissions_string)) {
-            cmd.default_member_permissions = payload.default_member_permissions as string | null;
+        if (!Array.isArray(cmd.default_member_permissions_string)) return;
+
+        const bitfield = cmd.default_member_permissions;
+        if (payload.default_member_permissions === null && bitfield !== undefined && bitfield !== null) {
+            Log.warn(`${cmd.name}: "default_member_permissions_string" is empty, so everyone can use it and "default_member_permissions" (${bitfield}) is cleared. Remove the empty list to use this bitfield`);
         }
+        cmd.default_member_permissions = payload.default_member_permissions as string | null;
     }
 
     /**

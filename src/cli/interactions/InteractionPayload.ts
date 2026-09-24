@@ -55,9 +55,11 @@ export class InteractionPayload {
             ? {command_scope: 'guild', id: {[raw.guild_id]: raw.id}}
             : {command_scope: 'global', id: raw.id};
 
-        // Names would drop the unknown bits, and they win over the bitfield: only keep the bitfield then
-        const names = Utils.unknownPermissionBits(raw.default_member_permissions) === 0n
-            ? {default_member_permissions_string: Utils.bitfieldToPermissions(raw.default_member_permissions)}
+        // Names would drop the unknown bits, and they win over the bitfield: only keep the bitfield then.
+        // No empty list either, which would open the interaction to everyone if the bitfield is edited later
+        const permissionNames = Utils.bitfieldToPermissions(raw.default_member_permissions);
+        const names = Utils.unknownPermissionBits(raw.default_member_permissions) === 0n && permissionNames.length > 0
+            ? {default_member_permissions_string: permissionNames}
             : {};
 
         return {

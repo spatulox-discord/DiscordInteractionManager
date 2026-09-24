@@ -181,6 +181,16 @@ describe("BaseInteractionManager.deploy", () => {
         assert.equal((calls[0]!.body as any).default_member_permissions, "4");
         assert.equal((await readCommand("ban.json")).default_member_permissions, "4");
     });
+
+    it("warns when an empty permission list clears the bitfield", async () => {
+        await writeCommand("ban.json", {name: "ban", type: 1, description: "Ban", command_scope: "global", default_member_permissions: "4", default_member_permissions_string: []});
+        const {manager} = createManager(() => ({id: C1}));
+        const warn = mock.method(console, "warn", () => {});
+
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL));
+
+        assert.match(String(warn.mock.calls[0]!.arguments[0]), /ban: "default_member_permissions_string" is empty, so everyone can use it/);
+    });
 });
 
 describe("BaseInteractionManager.delete in every guild", () => {
