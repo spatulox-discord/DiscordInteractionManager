@@ -153,7 +153,7 @@ export abstract class BaseInteractionManager {
         printResult: boolean = true,
     ): Promise<Interaction[]> {
         const scopeLabel = scope === 'global' ? 'global' : `guild ${guildId}`;
-        console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
+        if (printResult) console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
 
         try {
             const rawCmds = await this.rest.get(endpoint) as any[];
