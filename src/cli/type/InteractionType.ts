@@ -54,7 +54,7 @@ export type PermissionString = keyof typeof PermissionFlagsBits | string;
 
 export interface Choice {
     name: string;
-    value: string;
+    value: string | number;
 }
 
 export interface CommandOption {
