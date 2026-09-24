@@ -28,10 +28,9 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@discordjs/rest": "^2.6.1",
+    "discord-api-types": "^0.38.43",
     "dotenv": "^17.3.1"
-  },
-  "peerDependencies": {
-    "discord.js": "^14.26.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
