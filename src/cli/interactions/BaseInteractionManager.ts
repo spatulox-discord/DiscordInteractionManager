@@ -362,7 +362,7 @@ export abstract class BaseInteractionManager {
                         });
                         console.log(`${cmd.name} updated globally`);
                     }
-                    // 2b: RESTAPIPartialCurrentUserGuild-specific command
+                    // 2b: Guild-specific command
                     else if (cmd.id && cmd.command_scope === "guild") {
                         const deployed = Object.entries(cmd.id)
                             .filter((entry): entry is [string, string] => !!entry[1]);
@@ -375,7 +375,7 @@ export abstract class BaseInteractionManager {
                             if (result.status === "fulfilled") {
                                 console.log(`${cmd.name} updated in guild ${guildId}`);
                             } else {
-                                Log.error(`${cmd.name}: RESTAPIPartialCurrentUserGuild ${guildId}: ${(result.reason as Error).message}`);
+                                Log.error(`${cmd.name}: Guild ${guildId}: ${(result.reason as Error).message}`);
                             }
                         });
                     }
