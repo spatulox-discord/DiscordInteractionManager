@@ -27,10 +27,10 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
                 continue;
             }
             if (!await FileManager.fileExists(PathUtils.createPathFile(folderName, `${filename}.json`))) break;
-            if (await this.input.yesNoInput(`"${filename}" already exists. Overwrite? (y/n): `)) break;
+            if (await this.input.yesNoInput(`"${filename}" already exists. Overwrite?`)) break;
         }
 
-        if (!await this.input.yesNoInput("\nSave this file? (y/n): ")) {
+        if (!await this.input.yesNoInput("\nSave this file?")) {
             console.log("Cancelled");
             return;
         }
@@ -43,7 +43,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
     }
 
     protected async nsfw(config: SlashCommandConfigGenerator | ContextMenuConfigGenerator): Promise<void> {
-        if(await this.input.yesNoInput("NSFW ? (y/n)")){
+        if(await this.input.yesNoInput("NSFW?")){
             config.nsfw = true
         }
     }

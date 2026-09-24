@@ -52,7 +52,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         // 5. Guild Specific
         console.clear();
         console.log("⚙️ 5/6 - Guild Specific");
-        if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
+        if(await this.input.yesNoInput("Guild specific?")) {
             config.command_scope = "guild"
             config.id = await this.chooseGuilds()
         }

@@ -55,7 +55,7 @@ export abstract class ScopeInteractionCLI extends BaseCLI {
     protected async confirmDeletion(selected: Interaction[], where: string): Promise<boolean> {
         if (selected.length === 0) return false;
         const names = selected.map(cmd => cmd.name).join(", ");
-        if (await this.input.yesNoInput(`Delete ${names} ${where}? (y/n): `)) return true;
+        if (await this.input.yesNoInput(`Delete ${names} ${where}?`)) return true;
         console.log("Cancelled");
         return false;
     }
