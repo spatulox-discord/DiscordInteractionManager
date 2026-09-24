@@ -6,9 +6,11 @@ import {PathUtils} from "../utils/PathUtils";
 import {FolderName} from "../type/FolderName";
 import {ContextMenuConfigGenerator, SlashCommandConfigGenerator} from "./type/InteractionType";
 
+export const BACK = Symbol("back");
+
 export type MenuSelectionCLI = {
-    label: string; // The Label for the Menu Choice
-    action: () => BaseCLI | Promise<any> | null
+    label: string;
+    action: () => BaseCLI | typeof BACK | Promise<unknown> | null
 }[]
 
 /**
@@ -38,43 +40,37 @@ export abstract class BaseCLI {
     }
 
     protected async showMainMenu(): Promise<void> {
-        console.clear();
-        console.log(this.getTitle());
-        console.log(`Connected as "${BaseCLI.botName}"`)
-        console.log('═'.repeat(40));
+        while (true) {
+            console.clear();
+            console.log(this.getTitle());
+            console.log(`Connected as "${BaseCLI.botName}"`)
+            console.log('═'.repeat(40));
 
-        this.menuSelection.forEach((option, index) => {
-            console.log(`${index + 1}. ${option.label}`);
-        });
-        console.log('═'.repeat(40));
+            this.menuSelection.forEach((option, index) => {
+                console.log(`${index + 1}. ${option.label}`);
+            });
+            console.log('═'.repeat(40));
 
-        const choice = await this.prompt('Choose an option: ');
+            const choice = (await this.prompt('Choose an option: ')).trim();
+            if (choice.toLowerCase() === "exit") return;
 
-        if(choice == "exit") {
-            return this.goBack()
-        }
-
-        const choiceIndex = parseInt(choice) - 1;
-
-        if (choiceIndex >= 0 && choiceIndex < this.menuSelection.length) {
-            const option = this.menuSelection[choiceIndex];
-            if(!option){
-                console.log("Invalid Choice")
-                return this.showMainMenu();
-            }
-
-            const result = await option.action();
-            if (result instanceof BaseCLI) {
-                if(result == this){
+            const option = this.menuSelection[Number(choice) - 1];
+            if (!option) {
+                console.log("Invalid choice");
+            } else {
+                const result = await option.action();
+                if (result === BACK) return;
+                if (result instanceof BaseCLI) {
+                    if (result !== this) {
+                        await result.showMainMenu();
+                        continue;
+                    }
                     await this.execute();
-                } else {
-                    return await result.showMainMenu();
                 }
             }
-        }
 
-        await this.prompt('Press Enter to continue...');
-        return this.showMainMenu();
+            await this.prompt('Press Enter to continue...');
+        }
     }
 
     protected async prompt(question: string): Promise<string> {
@@ -147,20 +143,10 @@ export abstract class BaseCLI {
         console.log('🔗 Wiki: https://github.com/Spatulox/DiscordInteractionManager/wiki');
         console.log('🔗 Bugs: https://github.com/Spatulox/DiscordInteractionManager/issues')
         console.log('═'.repeat(80));
-
-        await this.prompt('Press Enter to continue...');
-        if (this.parent) {
-            await this.parent.showMainMenu();
-        } else {
-            await this.showMainMenu();
-        }
     }
 
-    protected async goBack(): Promise<void> {
-        if(this.parent){
-            return this.parent?.showMainMenu();
-        }
-        return this.execute() // Fallback for MainCLI
+    protected goBack(): typeof BACK {
+        return BACK;
     }
 
     protected async save(folderName: FolderName,config: ContextMenuConfigGenerator | SlashCommandConfigGenerator): Promise<void> {
@@ -191,8 +177,7 @@ export abstract class BaseCLI {
 
         if (!await this.yesNoInput("\nSave this file? (y/n): ")) {
             console.log("Cancelled");
-            await this.prompt('Press Enter to continue...');
-            return this.showMainMenu();
+            return;
         }
 
         if (await FileManager.writeJsonFile(PathUtils.createPathFolder(folderName), finalFilename, data)) {

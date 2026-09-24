@@ -22,6 +22,7 @@ export class MainCLI extends BaseCLI {
             throw new Error(`Cannot connect to Discord, check DISCORD_BOT_TOKEN and your connection (${(error as Error).message})`);
         }
         await this.showMainMenu();
+        await this.execute();
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
