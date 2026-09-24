@@ -9,6 +9,6 @@ export default defineConfig([
         sourcemap: false,
         minify: true,                   // CLI optimisé
         clean: true,
-        external: ['discord.js', 'discord-api-types', '@discordjs'],
+        // dependencies from package.json are left external by tsup
     }
 ])
