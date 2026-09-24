@@ -459,12 +459,13 @@ export abstract class BaseInteractionManager {
     }
 
     private async readInteraction(filePath: string): Promise<Interaction | null> {
-        try {
-            const data = await FileManager.readJsonFile(filePath);
+        const data = await FileManager.readJsonFile(filePath);
+        if (data === false) return null; // readJsonFile already logged why
 
+        try {
             return InteractionValidator.validate(data);
         } catch (error) {
-            console.error(`Error reading ${filePath}:`, error);
+            Log.error(`Invalid interaction file ${filePath}: ${(error as Error).message}`);
             return null;
         }
     }
