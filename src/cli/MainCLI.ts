@@ -3,6 +3,7 @@ import {BaseCLI, MenuSelectionCLI} from "./BaseCLI";
 import {InteractionCLI} from "./InteractionCLI/InteractionCLI";
 import {GenerationCLI} from "./GenerationCLI/GenerationCLI";
 import {Env} from "../Env";
+import {CommandManager} from "./interactions/InteractionManager";
 
 /**
  * --- MainCLI ---
@@ -14,13 +15,13 @@ export class MainCLI extends BaseCLI {
         return "💠 Discord Interaction Manager CLI";
     }
 
-    constructor() {
-        super();
-        const {clientId, token} = Env
-        if(!clientId || !token){
-            throw new Error("Missing clientId or token");
+    async start(): Promise<void> {
+        try {
+            BaseCLI.botName = await new CommandManager(Env.clientId, Env.token).getBotName();
+        } catch (error) {
+            throw new Error(`Cannot connect to Discord, check DISCORD_BOT_TOKEN and your connection (${(error as Error).message})`);
         }
-        this.showMainMenu();
+        await this.showMainMenu();
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
@@ -36,4 +37,20 @@ export class MainCLI extends BaseCLI {
     }
 }
 
-new MainCLI()
+async function main(): Promise<void> {
+    try {
+        void Env.clientId;
+        void Env.token;
+    } catch (error) {
+        console.error(`❌ ${(error as Error).message}`);
+        console.error("Set it in a .env file (see .env.example) or in your environment");
+        process.exit(1);
+    }
+
+    await new MainCLI().start();
+}
+
+main().catch((error: Error) => {
+    console.error(`❌ ${error.message}`);
+    process.exit(1);
+});

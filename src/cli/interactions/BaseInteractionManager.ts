@@ -31,13 +31,8 @@ export abstract class BaseInteractionManager {
     }
 
     async getBotName(): Promise<string> {
-        try {
-            const botUser = await this.rest.get(Routes.currentApplication()) as RESTGetCurrentApplicationResult;
-            return botUser.name;
-        } catch (error) {
-            console.error("Cannot fetch bot name:", error);
-            return "Unknown Bot";
-        }
+        const botUser = await this.rest.get(Routes.currentApplication()) as RESTGetCurrentApplicationResult;
+        return botUser.name;
     }
 
     async printInteraction(cmdList: Interaction[]): Promise<void> {
