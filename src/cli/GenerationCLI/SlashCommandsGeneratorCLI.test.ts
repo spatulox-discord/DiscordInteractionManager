@@ -1,5 +1,8 @@
-import {beforeEach, describe, it, mock} from "node:test";
+import {afterEach, beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
 import {GuildSelector} from "../GuildSelector";
 import {CommandOption, DiscordOptionType, InteractionContextType} from "../type/InteractionType";
@@ -178,6 +181,29 @@ describe("InteractionGeneratorCLI.selectEnumValues", () => {
         const answers = ["3", "2,0"];
         assert.deepEqual(await select(answers), [2, 0]);
         assert.deepEqual(answers, []);
+    });
+});
+
+describe("InteractionGeneratorCLI.save", () => {
+    let folder: string;
+
+    beforeEach(async () => {
+        folder = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
+        process.env.DISCORD_INTERACTION_FOLDER = folder;
+        delete process.env.DISCORD_BOT_DEV;
+        mock.method(console, "info", () => {});
+    });
+
+    afterEach(async () => {
+        await fs.rm(folder, {recursive: true, force: true});
+    });
+
+    it("asks another name for a file that would be ignored", async () => {
+        const answers = ["Example_ping", "ping", "y"];
+        await scripted(answers).save("commands", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+
+        assert.deepEqual(answers, []);
+        assert.deepEqual(await fs.readdir(path.join(folder, "commands")), ["ping.json"]);
     });
 });
 

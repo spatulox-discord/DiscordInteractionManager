@@ -59,6 +59,7 @@ Date format : dd/mm/yyyy
     - An unknown permission name in `default_member_permissions_string` (e.g. a typo) was skipped with a warning, restricting the interaction to administrators when it was the only one, and names such as `constructor` crashed : the file is now reported
     - A context menu file in `commands/` (or a slash command in `context_menu/`) was deployed by the wrong manager, which then never listed it from Discord nor cleaned its ID once deleted : such a file is now reported and skipped
     - Deleting an interaction read the `example*` files while cleaning the local IDs, and reported the invalid ones
+    - The generators accepted a file name starting with `example`, so the generated file was silently ignored
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 

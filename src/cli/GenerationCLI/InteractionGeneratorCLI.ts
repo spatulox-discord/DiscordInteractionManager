@@ -22,6 +22,10 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         let filename: string;
         while (true) {
             filename = (await this.input.requireInput("Filename : ", FileManager.isSafeFilename)).trim().replace(/\.json$/i, '');
+            if (FileManager.isExampleFile(filename)) {
+                console.log('Files whose name starts with "example" are ignored, choose another name');
+                continue;
+            }
             if (!await FileManager.fileExists(PathUtils.createPathFile(folderName, `${filename}.json`))) break;
             if (await this.input.yesNoInput(`"${filename}" already exists. Overwrite? (y/n): `)) break;
         }
