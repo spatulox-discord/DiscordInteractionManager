@@ -94,10 +94,12 @@ export class Builder {
     showBar(visible) {
         const bar = this.unsavedBar;
         if (visible) {
+            // Only when it appears: removing the flash of canLeave must not play it again
+            if (bar.hidden || bar.classList.contains("leaving")) bar.classList.add("entering");
             bar.classList.remove("leaving");
             bar.hidden = false;
         } else if (!bar.hidden) {
-            bar.classList.remove("alert");
+            bar.classList.remove("alert", "entering");
             bar.classList.add("leaving");
         }
     }
@@ -108,6 +110,8 @@ export class Builder {
             this.unsavedBar.classList.remove("leaving");
         } else if (event.animationName === "bar-shake") {
             this.unsavedBar.classList.remove("alert");
+        } else if (event.animationName === "bar-in") {
+            this.unsavedBar.classList.remove("entering");
         }
     }
 
@@ -127,7 +131,7 @@ export class Builder {
     canLeave() {
         if (!this.isDirty()) return true;
         const bar = this.unsavedBar;
-        bar.classList.remove("alert");
+        bar.classList.remove("alert", "entering");
         void bar.offsetWidth; // Restarts the animation
         bar.classList.add("alert");
         return false;

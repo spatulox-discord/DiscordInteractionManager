@@ -328,8 +328,8 @@ button.close { border-radius: 50%; width: 34px; height: 34px; padding: 0; }
     color: var(--bar-text);
     font-weight: 500;
     box-shadow: 0 8px 24px rgb(0 0 0 / .35);
-    animation: bar-in .2s ease-out;
 }
+.unsaved-bar.entering { animation: bar-in .2s ease-out; }
 .unsaved-bar.alert { background: var(--bar-alert); animation: bar-shake .45s; }
 .unsaved-bar.leaving { animation: bar-out .2s ease-in forwards; pointer-events: none; }
 @keyframes bar-in { from { opacity: 0; transform: translate(-50%, 12px); } }
@@ -339,7 +339,7 @@ button.close { border-radius: 50%; width: 34px; height: 34px; padding: 0; }
     40%, 80% { transform: translateX(calc(-50% + 8px)); }
 }
 @media (prefers-reduced-motion: reduce) {
-    .unsaved-bar, .unsaved-bar.alert, .editor-modal, .editor-modal::backdrop { animation: none; }
+    .unsaved-bar.entering, .unsaved-bar.alert, .editor-modal, .editor-modal::backdrop { animation: none; }
     .editor-modal.closing { animation: editor-out 1ms forwards; }
     /* Still an animation, since the bar is hidden when it ends */
     .unsaved-bar.leaving { animation: bar-out 1ms forwards; }
