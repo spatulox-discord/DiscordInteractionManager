@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import {REST} from '@discordjs/rest';
 import {RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult, Routes} from 'discord-api-types/v10';
 import * as fs from 'fs/promises';
