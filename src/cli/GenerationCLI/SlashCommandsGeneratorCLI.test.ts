@@ -46,6 +46,31 @@ describe("SlashCommandGeneratorCLI choices", () => {
         assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.NUMBER, " "), false);
     });
 
+    it("keeps choice values within the limits of the option", () => {
+        const {INTEGER, NUMBER, STRING} = DiscordOptionType;
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(INTEGER, "5", {min_value: 1, max_value: 10}), true);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(INTEGER, "0", {min_value: 1}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(NUMBER, "10.5", {max_value: 10}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "ab", {min_length: 3}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "abcd", {max_length: 3}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "abc", {min_length: 3, max_length: 3}), true);
+    });
+
+    it("asks again for a choice name or value already used", async () => {
+        const answers = ["y", "One", "1", "y", "One", "Two", "1", "01", "2", "n"];
+        assert.deepEqual(await scripted(answers).addChoices(DiscordOptionType.INTEGER), [
+            {name: "One", value: 1},
+            {name: "Two", value: 2},
+        ]);
+        assert.deepEqual(answers, []);
+    });
+
+    it("asks again for a choice outside the limits of the option", async () => {
+        const answers = ["y", "Big", "11", "10", "n"];
+        assert.deepEqual(await scripted(answers).addChoices(DiscordOptionType.INTEGER, {max_value: 10}), [{name: "Big", value: 10}]);
+        assert.deepEqual(answers, []);
+    });
+
     it("stores integer choices as numbers", async () => {
         const generator = scripted(["y", "One", "abc", "1", "y", "Two", "2", "n"]);
         assert.deepEqual(await generator.addChoices(DiscordOptionType.INTEGER), [

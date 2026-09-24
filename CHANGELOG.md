@@ -40,6 +40,7 @@ Date format : dd/mm/yyyy
     - Every yes / no prompt shows `(y/n)` in the same way (some had no hint or no space before the answer)
     - The name column of the tables is called "Name" (it was "Nom")
     - The generators trim the descriptions and choice names, and ask again when they are blank (e.g. only spaces)
+    - The generator refuses choices with a name or a value already used, or outside the limits of their option (`min_value` / `max_value`, `min_length` / `max_length`)
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator
