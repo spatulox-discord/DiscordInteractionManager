@@ -280,11 +280,24 @@ export abstract class BaseInteractionManager {
         }
 
         const commands = [...merged.values()];
-        for (const {cmd, file} of await this.readGuildFiles()) {
-            const remote = commands.find(c => c.type === cmd.type && c.name === cmd.name);
-            if (remote) remote.filename = file;
+        const files = await this.readGuildFiles();
+        for (const remote of commands) {
+            remote.filename = BaseInteractionManager.findLocalFile(remote, files);
         }
         return commands;
+    }
+
+    /**
+     * Several files can define the same name for different guilds: the file holding one of its IDs,
+     * or else targeting one of its guilds, is the one of this interaction.
+     */
+    private static findLocalFile(remote: Interaction & { command_scope: "guild" }, files: { cmd: Interaction, file: string }[]): string | undefined {
+        const guildIds = Object.keys(remote.id);
+        const candidates = files.flatMap(({cmd, file}) =>
+            cmd.command_scope === "guild" && cmd.type === remote.type && cmd.name === remote.name ? [{ids: cmd.id, file}] : []);
+        const holdsId = candidates.find(({ids}) => guildIds.some(guildId => ids[guildId] === remote.id[guildId]));
+        const targetsGuild = candidates.find(({ids}) => guildIds.some(guildId => guildId in ids));
+        return (holdsId ?? targetsGuild)?.file;
     }
 
     /**

@@ -251,6 +251,30 @@ describe("BaseInteractionManager.listPerGuild", () => {
     });
 });
 
+describe("BaseInteractionManager.listPerGuild local files", () => {
+    it("finds the file of each guild when several files share the name", async () => {
+        await writeCommand("ping_g1.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G1]: C1}});
+        await writeCommand("ping_g2.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G2]: null}});
+        await writeCommand("ping_g3.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G3]: null}});
+        const remote: Record<string, unknown[]> = {
+            [G1]: [{id: C1, type: 1, name: "ping", description: "d", guild_id: G1}],
+            [G2]: [{id: C2, type: 1, name: "ping", description: "d", guild_id: G2}],
+        };
+        const {manager} = createManager(({route}) => remote[route.split("/")[4]!] ?? []);
+
+        assert.equal((await manager.listPerGuild([guild(G1)]))[0]!.filename, "ping_g1.json");
+        assert.equal((await manager.listPerGuild([guild(G2)]))[0]!.filename, "ping_g2.json");
+        assert.equal((await manager.listPerGuild([guild(G2), guild(G1)]))[0]!.filename, "ping_g1.json");
+    });
+
+    it("does not link a file targeting other guilds", async () => {
+        await writeCommand("ping_g3.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G3]: null}});
+        const {manager} = createManager(() => [{id: C1, type: 1, name: "ping", description: "d", guild_id: G1}]);
+
+        assert.equal((await manager.listPerGuild([guild(G1)]))[0]!.filename, undefined);
+    });
+});
+
 describe("BaseInteractionManager progress", () => {
     it("shows how many guilds are fetched on a terminal", async () => {
         const {manager} = createManager(() => []);
