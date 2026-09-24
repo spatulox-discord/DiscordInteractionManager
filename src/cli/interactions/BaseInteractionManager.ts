@@ -66,18 +66,19 @@ export abstract class BaseInteractionManager {
 
     /**
      * @param scope nothing for global interactions, a guild ID, or ALL_GUILDS for guild interactions in any guild
+     * @param printResult false to only get the list (duplicates and invalid files are still reported)
      */
-    async listFromFile(list: Listing, scope?: string | typeof ALL_GUILDS): Promise<Interaction[]> {
+    async listFromFile(list: Listing, scope?: string | typeof ALL_GUILDS, printResult: boolean = true): Promise<Interaction[]> {
         const guildID = typeof scope === "string" ? scope : undefined;
         const allGuilds = scope === ALL_GUILDS;
         const scopeMessage = guildID ? `(guild ${guildID})` : allGuilds ? "(all guilds)" : "(global)";
 
-        console.log(`Listing Local Handlers (${this.folderPath}) ${scopeMessage}`);
+        if (printResult) Log.print(`Listing Local Handlers (${this.folderPath}) ${scopeMessage}`);
 
         try {
             const files = await this.listLocalFiles();
             if (files.length === 0) {
-                console.log('No files found');
+                if (printResult) Log.print('No files found');
                 return [];
             }
 
@@ -150,9 +151,9 @@ export abstract class BaseInteractionManager {
                 commandList.push(commandWithIndex);
             }
 
-            console.log(`${commandList.length} local ${this.folderPath}(s) found\n`);
+            if (printResult) Log.print(`${commandList.length} local ${this.folderPath}(s) found\n`);
             this.warnDuplicates(commandList);
-            this.printInteraction(commandList);
+            if (printResult) this.printInteraction(commandList);
             return commandList;
         } catch (error) {
             Log.error(`${(error as Error).message}`);
@@ -193,7 +194,7 @@ export abstract class BaseInteractionManager {
         printResult: boolean = true,
     ): Promise<Interaction[]> {
         const scopeLabel = scope === 'global' ? 'global' : `guild ${guildId}`;
-        if (printResult) console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
+        if (printResult) Log.print(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
 
         try {
             const rawCmds = await this.rest.get(endpoint) as OnlineInteractionConfig[];
@@ -202,7 +203,7 @@ export abstract class BaseInteractionManager {
                 .map(cmd => InteractionPayload.fromDiscord(cmd));
 
             if(printResult) {
-                console.log(`${commandList.length} ${this.folderPath}(s) found\n`);
+                Log.print(`${commandList.length} ${this.folderPath}(s) found\n`);
                 this.printInteraction(commandList);
             }
 
@@ -244,18 +245,26 @@ export abstract class BaseInteractionManager {
         }
         console.log(`📡 Counting the ${this.folderPath} of ${guilds.length} guild(s)...\n`);
 
-        // list logs its own errors and returns an empty list
-        const globalCount = (await this.list(false)).length;
-        const guildCounts = (await this.fetchEachGuild(guilds)).map(commands => commands.length);
+        const counts = await this.countEachGuild(guilds);
 
         const label = this.folderPath.charAt(0).toUpperCase() + this.folderPath.slice(1);
         console.log(`📊 ${this.folderPath.toUpperCase()} PER GUILD :`);
-        console.table(guilds.map((guild, index) => ({
+        console.table(counts.map(({guild, global, specific}) => ({
             "Guild": `${guild.name} (${guild.id})`,
-            [`Global ${label}`]: globalCount,
-            [`Specific ${label}`]: guildCounts[index],
-            "Total": globalCount + guildCounts[index]!,
+            [`Global ${label}`]: global,
+            [`Specific ${label}`]: specific,
+            "Total": global + specific,
         })));
+    }
+
+    /**
+     * How many global and guild interactions are available in each guild, in the order of the guilds.
+     */
+    async countEachGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<{ guild: RESTAPIPartialCurrentUserGuild, global: number, specific: number }[]> {
+        // list logs its own errors and returns an empty list
+        const global = (await this.list(false)).length;
+        const perGuild = await this.fetchEachGuild(guilds);
+        return guilds.map((guild, index) => ({guild, global, specific: perGuild[index]!.length}));
     }
 
 
@@ -306,7 +315,8 @@ export abstract class BaseInteractionManager {
      * listGuild logs its own errors and returns an empty list.
      */
     private async fetchEachGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<Interaction[][]> {
-        const progress = process.stdout.isTTY
+        const showProgress = process.stdout.isTTY && !Log.isCapturing();
+        const progress = showProgress
             ? (done: number) => process.stdout.write(`\r📡 ${done}/${guilds.length} guild(s) fetched`)
             : () => {};
         let done = 0;
@@ -318,7 +328,7 @@ export abstract class BaseInteractionManager {
             return commands;
         }));
 
-        if (process.stdout.isTTY) process.stdout.write("\n\n");
+        if (showProgress) process.stdout.write("\n\n");
         return perGuild;
     }
 
@@ -332,7 +342,7 @@ export abstract class BaseInteractionManager {
     }
 
     async deploy(commands: Interaction[]): Promise<void> {
-        console.log(`Deploying ${commands.length} ${this.folderPath}(s)...`);
+        Log.print(`Deploying ${commands.length} ${this.folderPath}(s)...`);
         let updatedCount = 0;
         for (const cmd of commands) {
             const filename = cmd.filename;
@@ -349,11 +359,11 @@ export abstract class BaseInteractionManager {
                 Log.error(`Error ${filename}: ${(error as Error).message}`);
             }
         }
-        console.log(`${updatedCount}/${commands.length} deployed`);
+        Log.print(`${updatedCount}/${commands.length} deployed`);
     }
 
     async delete(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
-        console.log(`Deleting ${commands.length} ${this.folderPath}(s)...`);
+        Log.print(`Deleting ${commands.length} ${this.folderPath}(s)...`);
 
         const IDList: string[] = [];
 
@@ -370,7 +380,7 @@ export abstract class BaseInteractionManager {
                         ? Routes.applicationGuildCommand(this.clientId, guildId, commandId)
                         : Routes.applicationCommand(this.clientId, commandId));
                     IDList.push(commandId);
-                    console.log(`${cmd.name} deleted ${guildId ? `in guild ${guild?.name ?? guildId}` : "globally"}`);
+                    Log.print(`${cmd.name} deleted ${guildId ? `in guild ${guild?.name ?? guildId}` : "globally"}`);
                 } catch (error) {
                     if (BaseInteractionManager.isGone(error)) {
                         IDList.push(commandId);
@@ -387,7 +397,7 @@ export abstract class BaseInteractionManager {
     }
 
     async update(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
-        console.log(`Updating ${commands.length} ${this.folderPath}(s)...`);
+        Log.print(`Updating ${commands.length} ${this.folderPath}(s)...`);
         const goneIds: string[] = [];
 
         for (const cmd of commands) {
@@ -411,14 +421,14 @@ export abstract class BaseInteractionManager {
                     }
 
                     if (!await this.patch(Routes.applicationGuildCommand(this.clientId, guild.id, commandId), body, cmd.name, commandId, goneIds)) continue;
-                    console.log(`${cmd.name} updated in guild ${guild.name} ${guild.id}`);
+                    Log.print(`${cmd.name} updated in guild ${guild.name} ${guild.id}`);
                 }
                 // Case 2: Global / All Specific guilds
                 else {
                     // 2a: Global command
                     if (cmd.command_scope === "global") {
                         if (!await this.patch(Routes.applicationCommand(this.clientId, cmd.id), body, cmd.name, cmd.id, goneIds)) continue;
-                        console.log(`${cmd.name} updated globally`);
+                        Log.print(`${cmd.name} updated globally`);
                     }
                     // 2b: Guild-specific command
                     else if (cmd.id && cmd.command_scope === "guild") {
@@ -431,7 +441,7 @@ export abstract class BaseInteractionManager {
                         results.forEach((result, index) => {
                             const [guildId, commandId] = deployed[index]!;
                             if (result.status === "fulfilled") {
-                                console.log(`${cmd.name} updated in guild ${guildId}`);
+                                Log.print(`${cmd.name} updated in guild ${guildId}`);
                             } else if (BaseInteractionManager.isGone(result.reason)) {
                                 goneIds.push(commandId);
                                 Log.warn(`${cmd.name}: Guild ${guildId}: already deleted on Discord, its ID is removed from the local file`);
@@ -507,7 +517,7 @@ export abstract class BaseInteractionManager {
                     newIds[guildId] = resp.id;
                 } catch (error) {
                     nb++;
-                    console.error(`⚠️ Guild ${guildId}: ${(error as Error).message}`);
+                    Log.error(`Guild ${guildId}: ${(error as Error).message}`);
                 }
             }
 
@@ -534,7 +544,7 @@ export abstract class BaseInteractionManager {
                 await this.saveFile(file, fileCmd);
                 return true
             } catch (error) {
-                console.error(`⚠️  Global: ${(error as Error).message}`);
+                Log.error(`Global: ${(error as Error).message}`);
             }
         }
         return false
@@ -556,6 +566,22 @@ export abstract class BaseInteractionManager {
             fileCmd.default_member_permissions = InteractionPayload.resolvePermissions(fileCmd);
         }
         await this.saveInteraction(file, fileCmd);
+    }
+
+    /**
+     * Saves interactions fetched from Discord into the generated folder.
+     * @param subFolder Folder inside the generated folder, so guild interactions never overwrite global ones
+     */
+    async saveToGeneratedFiles(commands: Interaction[], subFolder?: string): Promise<void> {
+        const folder = PathUtils.createPathFolder("generated_" + this.folderPath) + (subFolder ? `/${subFolder}` : "");
+        const usedFilenames = new Set<string>();
+        for (const cmd of commands) {
+            // A user and a message context menu can share the same name
+            let filename = FileManager.toSafeFilename(cmd.name);
+            if (usedFilenames.has(filename.toLowerCase())) filename = `${filename}_${cmd.type}`;
+            usedFilenames.add(filename.toLowerCase());
+            await FileManager.writeJsonFile(folder, filename, cmd)
+        }
     }
 
     /**
@@ -604,7 +630,7 @@ export abstract class BaseInteractionManager {
 
         const files = await this.listLocalFiles();
         if (files.length === 0) {
-            console.log('No local files to clean');
+            Log.print('No local files to clean');
             return
         }
 

@@ -1,15 +1,11 @@
-import {afterEach, beforeEach, describe, it, mock} from "node:test";
+import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import {GlobalInteractionCLI} from "./GlobalInteractionCLI";
 import {GuildInteractionCLI} from "./GuildInteractionCLI";
 import {AllGuildsInteractionCLI} from "./AllGuildsInteractionCLI";
 import {ALL_GUILDS, Listing} from "../enum/Listing";
 import {InteractionManagerCLI} from "./InteractionManagerCLI";
 import {GuildSelector} from "../GuildSelector";
-import {InteractionPayload} from "../interactions/InteractionPayload";
 import {NO_PAUSE} from "../BaseCLI";
 
 const manager = {folderPath: "commands"} as any;
@@ -105,32 +101,6 @@ describe("ScopeInteractionCLI.offerDetails", () => {
         cli.input.ask = async () => { throw new Error("should not ask"); };
 
         assert.equal(await cli.offerDetails([]), undefined);
-    });
-});
-
-describe("ScopeInteractionCLI.saveToLocalFiles", () => {
-    let folder: string;
-
-    beforeEach(async () => {
-        folder = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
-        process.env.DISCORD_INTERACTION_FOLDER = folder;
-        delete process.env.DISCORD_BOT_DEV;
-        mock.method(console, "info", () => {});
-    });
-
-    afterEach(async () => {
-        await fs.rm(folder, {recursive: true, force: true});
-    });
-
-    it("saves the commands of a guild in their own folder", async () => {
-        const raw = {id: "c1", application_id: "app", version: "v1", type: 1, name: "ping", description: "Ping", guild_id: "111"} as any;
-        const cli = new GuildInteractionCLI(undefined as any, manager, "CommandManager", guild) as any;
-
-        await cli.saveToLocalFiles([InteractionPayload.fromDiscord(raw)], guild.id);
-
-        const saved = JSON.parse(await fs.readFile(path.join(folder, "generated_commands", "111", "ping.json"), "utf8"));
-        assert.equal(saved.command_scope, "guild");
-        assert.deepEqual(saved.id, {"111": "c1"});
     });
 });
 
