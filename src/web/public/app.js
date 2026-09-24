@@ -330,15 +330,35 @@ async function countPerGuild() {
 
 // ---- Navigation ----
 
+const KIND_TITLES = {commands: "Slash commands", context_menu: "Context menus"};
+const VIEW_TITLES = {manage: "Manage", builder: "Builder"};
+
 function openBuilder(filename) {
     state.view = "builder";
     renderNavigation();
     builder.open(state.kind, filename);
 }
 
+// Opens a view of a type of interaction, unless the builder has unsaved changes
+function navigate(kind, view) {
+    if ((kind === state.kind && view === state.view) || !canLeaveBuilder()) return;
+    if (kind !== state.kind) {
+        state.selectedLocal.clear();
+        state.selectedRemote.clear();
+    }
+    state.kind = kind;
+    state.view = view;
+    renderNavigation();
+    if (view === "builder") builder.open(kind, null); else refresh();
+}
+
 function renderNavigation() {
-    $$("[data-kind]").forEach(tab => tab.classList.toggle("active", tab.dataset.kind === state.kind));
-    $$("[data-view]").forEach(tab => tab.classList.toggle("active", tab.dataset.view === state.view));
+    for (const item of $$(".nav-item")) {
+        const current = item.dataset.kind === state.kind && item.dataset.view === state.view;
+        item.classList.toggle("active", current);
+        if (current) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
+    }
+    $("#page-title").textContent = `${KIND_TITLES[state.kind]} › ${VIEW_TITLES[state.view]}`;
     $$("[data-scope]").forEach(tab => tab.classList.toggle("active", tab.dataset.scope === state.scope));
     $("#manage-view").hidden = state.view !== "manage";
     $("#builder-view").hidden = state.view !== "builder";
@@ -351,20 +371,7 @@ function canLeaveBuilder() {
 }
 
 function bindNavigation() {
-    $$("[data-kind]").forEach(tab => tab.addEventListener("click", () => {
-        if (!canLeaveBuilder()) return;
-        state.kind = tab.dataset.kind;
-        state.selectedLocal.clear();
-        state.selectedRemote.clear();
-        renderNavigation();
-        if (state.view === "builder") builder.open(state.kind, null); else refresh();
-    }));
-    $$("[data-view]").forEach(tab => tab.addEventListener("click", () => {
-        if (tab.dataset.view === state.view || !canLeaveBuilder()) return;
-        state.view = tab.dataset.view;
-        renderNavigation();
-        if (state.view === "manage") refresh(); else builder.open(state.kind, null);
-    }));
+    $$(".nav-item").forEach(item => item.addEventListener("click", () => navigate(item.dataset.kind, item.dataset.view)));
     $$("[data-scope]").forEach(tab => tab.addEventListener("click", () => {
         state.scope = tab.dataset.scope;
         state.localMode = "targeting";

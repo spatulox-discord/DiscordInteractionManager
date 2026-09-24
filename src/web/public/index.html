@@ -9,22 +9,31 @@
     <script type="module" src="app.js"></script>
 </head>
 <body>
-<header class="topbar">
+<div class="layout">
+<aside class="sidebar">
     <div class="brand">
         <img src="icon.svg" alt="" width="28" height="28">
-        <div>
-            <h1>Discord Interaction Manager</h1>
-            <p id="bot" class="muted">Connecting…</p>
-        </div>
+        <span>Discord Interaction Manager</span>
     </div>
-    <nav class="tabs" aria-label="Interaction kind">
-        <button type="button" data-kind="commands" class="tab">Slash commands</button>
-        <button type="button" data-kind="context_menu" class="tab">Context menus</button>
+    <!-- Each type of interaction has both views, as the categories of the Discord settings -->
+    <nav class="nav" aria-label="Sections">
+        <div class="nav-group">
+            <h2 class="nav-title">Slash commands</h2>
+            <button type="button" class="nav-item" data-kind="commands" data-view="manage">Manage</button>
+            <button type="button" class="nav-item" data-kind="commands" data-view="builder">Builder</button>
+        </div>
+        <div class="nav-group">
+            <h2 class="nav-title">Context menus</h2>
+            <button type="button" class="nav-item" data-kind="context_menu" data-view="manage">Manage</button>
+            <button type="button" class="nav-item" data-kind="context_menu" data-view="builder">Builder</button>
+        </div>
     </nav>
-    <nav class="tabs" aria-label="View">
-        <button type="button" data-view="manage" class="tab">Manage</button>
-        <button type="button" data-view="builder" class="tab">Builder</button>
-    </nav>
+    <p id="bot" class="bot">Connecting…</p>
+</aside>
+
+<div class="page">
+<header class="page-head">
+    <h1 id="page-title"></h1>
 </header>
 
 <main>
@@ -69,6 +78,8 @@
         <ol id="log" class="log"></ol>
     </section>
 </main>
+</div>
+</div>
 
 <aside id="details" class="drawer" hidden>
     <div class="drawer-head">

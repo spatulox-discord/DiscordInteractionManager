@@ -19,6 +19,10 @@
     --bar-bg: #111214;
     --bar-text: #f2f3f5;
     --bar-alert: #da373c;
+    --sidebar: #ebedf0;
+    --nav-hover: rgb(0 0 0 / .05);
+    --nav-active: rgb(0 0 0 / .09);
+    --sidebar-width: 232px;
     --radius: 8px;
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     color-scheme: light;
@@ -43,6 +47,9 @@
         --info: #9aa8ff;
         --info-bg: #222a4d;
         --bar-bg: #0b0c0e;
+        --sidebar: #1a1b1e;
+        --nav-hover: rgb(255 255 255 / .05);
+        --nav-active: rgb(255 255 255 / .1);
         color-scheme: dark;
     }
 }
@@ -65,34 +72,60 @@ p { margin: 0; }
 .hint { color: var(--muted); font-size: 12.5px; }
 [hidden] { display: none !important; }
 
-/* ---- Header ---- */
+/* ---- Sidebar, as in the Discord settings ---- */
 
-.topbar {
+.layout { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; }
+
+.sidebar {
     position: sticky;
     top: 0;
-    z-index: 5;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 16px 10px 10px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; font-weight: 600; line-height: 1.25; }
+.nav { display: grid; gap: 18px; }
+.nav-group { display: grid; gap: 2px; }
+.nav-title {
+    padding: 0 10px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+.nav-item {
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    color: var(--muted);
+    text-align: left;
+    padding: 7px 10px;
+    font-weight: 500;
+}
+.nav-item:hover:not(:disabled) { background: var(--nav-hover); color: var(--text); filter: none; }
+.nav-item.active { background: var(--nav-active); color: var(--text); }
+.bot {
+    margin-top: auto;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px 24px;
-    padding: 10px 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-}
-.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
-.brand p { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
-
-.tabs { display: flex; gap: 4px; }
-.tab {
-    background: none;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--nav-hover);
+    font-size: 12.5px;
     color: var(--muted);
-    border: 0;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    padding: 6px 8px;
 }
-.tab:hover { color: var(--text); background: none; }
-.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+.page { min-width: 0; }
+.page-head { max-width: 1400px; margin: 0 auto; padding: 20px 20px 0; }
+.page-head h1 { font-size: 20px; }
 
 main { max-width: 1400px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
 #manage-view { display: grid; gap: 16px; }
@@ -237,10 +270,11 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
 .unsaved-bar {
     position: fixed;
     bottom: 20px;
-    left: 50%;
+    /* Centered on the page, next to the sidebar */
+    left: calc(50% + var(--sidebar-width) / 2);
     z-index: 20;
     transform: translateX(-50%);
-    width: min(720px, calc(100% - 32px));
+    width: min(720px, calc(100% - var(--sidebar-width) - 32px));
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -271,7 +305,7 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
 .builder { padding-bottom: 72px; }
 .builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); gap: 16px; align-items: start; }
 .builder-form { display: grid; gap: 16px; }
-.sticky { position: sticky; top: 72px; }
+.sticky { position: sticky; top: 16px; }
 .preview { margin: 0; padding: 12px 14px; max-height: calc(100vh - 220px); overflow: auto; }
 .errors { margin: 0; padding: 10px 14px 10px 30px; background: var(--danger-bg); color: var(--danger); border-bottom: 1px solid var(--border); }
 
@@ -300,7 +334,11 @@ dialog .actions { justify-content: flex-end; margin-top: 16px; }
     .sticky { position: static; }
     .option-fields { grid-template-columns: 1fr; }
     main { padding: 12px; }
-    .topbar { padding: 10px 12px; }
+    :root { --sidebar-width: 0px; }
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .sidebar { position: static; height: auto; gap: 12px; padding: 12px; border-right: 0; border-bottom: 1px solid var(--border); }
+    .nav { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .page-head { padding: 14px 12px 0; }
     .log li { grid-template-columns: auto 1fr; }
     .log time { display: none; }
 }
