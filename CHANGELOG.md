@@ -33,6 +33,7 @@ Date format : dd/mm/yyyy
     - The CLI class hierarchy is simplified (`Prompt` helper, `GuildListManager` becomes `GuildSelector`)
     - The Command and ContextMenu managers start with a Global / Guild choice. Global only handles global interactions (deploying no longer deploys guild files, updating no longer updates every guild). Guild asks for the guild once and every action only applies to it. The separate List menu and the "y=global/n=specific" questions are gone, guild interactions saved from Discord go to `generated_<folder>/<guildId>/`, and "Count per guild" is in the All guilds menu
     - The generators list the guilds of the bot for a guild interaction and take their numbers (raw guild IDs were asked). Leaving it empty keeps a guild interaction with no guild yet, to add later from the Guild menu, instead of turning it into a global one
+    - An invalid selection of interactions asks again instead of cancelling the action, and leaving it empty cancels it
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator

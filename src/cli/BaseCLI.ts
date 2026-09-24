@@ -94,7 +94,7 @@ export abstract class BaseCLI {
         console.log('');
         console.log('🎮 Selection:');
         console.log('  • Numbered lists appear after the interaction list');
-        console.log('  • Enter: "1,3,5" or "all" to select which interaction you want to apply the action');
+        console.log('  • Enter: "1,3,5" or "all" to select which interaction you want to apply the action, or nothing to cancel');
 
         console.log('');
         console.log('🔗 Wiki: https://github.com/spatulox-discord/DiscordInteractionManager/wiki');

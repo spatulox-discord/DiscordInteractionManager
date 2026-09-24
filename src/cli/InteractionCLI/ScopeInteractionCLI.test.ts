@@ -15,9 +15,14 @@ import {NO_PAUSE} from "../BaseCLI";
 const manager = {folderPath: "commands"} as any;
 const guild = {id: "111", name: "Guild 111"} as any;
 
-function select(answer: string, commands: unknown[]) {
+function select(answers: string | string[], commands: unknown[]) {
+    const scripted = [answers].flat();
     const cli = new GlobalInteractionCLI(undefined as any, manager, "CommandManager") as any;
-    cli.input.ask = async () => answer;
+    cli.input.ask = async () => {
+        const answer = scripted.shift();
+        if (answer === undefined) throw new Error("No more scripted answers");
+        return answer;
+    };
     return cli.selectCommands(commands);
 }
 
@@ -37,10 +42,12 @@ describe("ScopeInteractionCLI.selectCommands", () => {
         assert.deepEqual(await select(" Exit", commands), []);
     });
 
-    it("rejects the whole selection when a number is invalid", async () => {
-        for (const answer of ["1,abc", "1,3", "1.5", ""]) {
-            assert.deepEqual(await select(answer, commands), [], answer);
-        }
+    it("cancels when left empty", async () => {
+        assert.deepEqual(await select(" ", commands), []);
+    });
+
+    it("asks again when a number is invalid", async () => {
+        assert.deepEqual(await select(["1,abc", "1,3", "1.5", "1"], commands), ["b"]);
     });
 });
 
