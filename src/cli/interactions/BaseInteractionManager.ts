@@ -202,29 +202,16 @@ export abstract class BaseInteractionManager {
 
         const globalCommands = await this.list(false)
 
+        // listGuild logs its own errors and returns an empty list
         const guildCommandPromises = guilds.map(async (guild: RESTAPIPartialCurrentUserGuild) => {
-            try {
-
-                let guildCommands = await this.listGuild(guild.id, false)
-
-                const allCommands = [...guildCommands, ...globalCommands]
-                return {
-                    guild: `${guild.name} (${guild.id})`,
-                    guildId: guild.id,
-                    globalCommands: globalCommands,
-                    guildCommands: guildCommands,
-                    count: allCommands.length
-                };
-            } catch (error) {
-                console.error(`⚠️ Guild ${guild.id}: ${(error as Error).message}`);
-                return {
-                    guild: `${guild.name} (${guild.id})`,
-                    guildId: guild.id,
-                    globalCommands: globalCommands,
-                    guildCommands: [],
-                    count: 0
-                };
-            }
+            const guildCommands = await this.listGuild(guild.id, false)
+            return {
+                guild: `${guild.name} (${guild.id})`,
+                guildId: guild.id,
+                globalCommands: globalCommands,
+                guildCommands: guildCommands,
+                count: guildCommands.length + globalCommands.length
+            };
         });
 
         const results = await Promise.all(guildCommandPromises);
@@ -338,12 +325,8 @@ export abstract class BaseInteractionManager {
 
                 // Case 1: Specific Guild
                 if (guild) {
-                    let commandId: string | undefined | null;
-                    if (cmd.command_scope === "global") {
-                        commandId = cmd.id;
-                    } else if (cmd.id && cmd.command_scope === "guild") {
-                        commandId = cmd.id[guild.id];
-                    }
+                    // A global command has no ID in a guild: it cannot be updated from here
+                    const commandId = cmd.command_scope === "guild" ? cmd.id[guild.id] : undefined;
 
                     if (!commandId) {
                         Log.error(`${cmd.name}: No command ID for guild ${guild.id}`);
