@@ -9,7 +9,7 @@ export const Env = {
         return token;
     },
     get dev(): boolean {
-        return !!process.env.DISCORD_BOT_DEV || process.env.DISCORD_BOT_DEV === "true";
+        return ["true", "1"].includes(process.env.DISCORD_BOT_DEV?.trim().toLowerCase() ?? "");
     },
     get interactionFolderPath(): string {
         return process.env.DISCORD_INTERACTION_FOLDER ? process.env.DISCORD_INTERACTION_FOLDER : "./handlers";
