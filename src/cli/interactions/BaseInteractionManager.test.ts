@@ -1,10 +1,11 @@
-import {afterEach, beforeEach, describe, it} from "node:test";
+import {afterEach, beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {Guild} from "discord.js";
 import {CommandManager} from "./InteractionManager";
+import {Listing} from "../enum/Listing";
 
 type RestCall = { method: string; route: string; body?: unknown };
 type RestHandler = (call: RestCall) => unknown;
@@ -97,5 +98,20 @@ describe("BaseInteractionManager.update", () => {
             "patch /applications/123456789012345678/guilds/111/commands/c1",
             "patch /applications/123456789012345678/guilds/222/commands/c2",
         ]);
+    });
+});
+
+describe("BaseInteractionManager.listFromFile", () => {
+    it("only lists the commands deployed in the requested guild", async () => {
+        await writeCommand("global.json", {name: "global", type: 1, description: "d", command_scope: "global", id: "c1"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {"111": "c2", "222": "c3"}});
+        await writeCommand("elsewhere.json", {name: "elsewhere", type: 1, description: "d", command_scope: "guild", id: {"222": "c4"}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        const commands = await manager.listFromFile(Listing.DEPLOYED, "111");
+
+        assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
     });
 });

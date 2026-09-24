@@ -123,8 +123,7 @@ export abstract class BaseInteractionManager {
                         );
                     }
                 }
-                // Filtre scope guild
-                if (guildID && cmd.id && !Object.keys(cmd.id)?.includes(guildID)) continue;
+                if (guildID && (cmd.command_scope !== "guild" || !(guildID in cmd.id))) continue;
 
                 const commandWithIndex = {
                     ...cmd,
