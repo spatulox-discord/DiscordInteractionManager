@@ -4,14 +4,24 @@ export class Prompt {
     private static rl: readline.Interface | null = null;
 
     ask(question: string): Promise<string> {
-        if (!Prompt.rl) {
-            Prompt.rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
-        }
-        const rl = Prompt.rl;
+        const rl = Prompt.rl ??= Prompt.createInterface();
         return new Promise(resolve => rl.question(question, resolve));
+    }
+
+    /**
+     * Ctrl+C, Ctrl+D or the end of a piped input quit right away, even during a long action:
+     * readline catches Ctrl+C, so it only closed the interface and the next question failed.
+     */
+    static createInterface(input: NodeJS.ReadableStream = process.stdin, output: NodeJS.WritableStream = process.stdout): readline.Interface {
+        const rl = readline.createInterface({input, output});
+        rl.on("SIGINT", () => Prompt.quit(130));
+        rl.on("close", () => Prompt.quit(0));
+        return rl;
+    }
+
+    private static quit(code: number): void {
+        console.log("\n👋  Bye !");
+        process.exit(code);
     }
 
     async requireInput(message: string, validator?: (val: string) => boolean, canBeEmpty: boolean = false): Promise<string> {
