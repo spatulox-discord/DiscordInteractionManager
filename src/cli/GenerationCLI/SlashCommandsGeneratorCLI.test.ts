@@ -242,6 +242,14 @@ describe("InteractionGeneratorCLI.save", () => {
         assert.deepEqual(answers, []);
         assert.deepEqual(await fs.readdir(path.join(folder, "commands")), ["ping.json"]);
     });
+
+    it("asks another name when only the extension is given", async () => {
+        const answers = [".json", " ping.JSON ", "y"];
+        await scripted(answers).save("commands", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+
+        assert.deepEqual(answers, []);
+        assert.deepEqual(await fs.readdir(path.join(folder, "commands")), ["ping.json"]);
+    });
 });
 
 describe("InteractionGeneratorCLI.chooseGuilds", () => {
