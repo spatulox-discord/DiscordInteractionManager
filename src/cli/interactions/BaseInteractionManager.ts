@@ -303,7 +303,7 @@ export abstract class BaseInteractionManager {
                 }
                 IDList.push(commandId);
 
-                console.log(`${cmd.name} for ${guild?.name} deleted`);
+                console.log(`${cmd.name} deleted ${guild ? `in guild ${guild.name}` : "globally"}`);
             } catch (error) {
                 Log.error(`${cmd.name}: ${(error as Error).message}`);
             }
