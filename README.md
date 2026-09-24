@@ -78,21 +78,53 @@ Choose an option:
 
 > - When generating files with the cli, you should be able to see generated files in the "**./handlers**"*
 
+> - For a guild interaction, the generator lists the guilds of your bot : enter their numbers (e.g. `0,2`), or leave empty to choose them later with "Add a guild ... to this guild" in the Guild menu
+
+## Manage interactions
+"Manage Interactions" → "Command Manager" or "ContextMenu Manager" lets you pick a scope**:
+```
+1. Global        ← global interactions only
+2. Guild         ← asks for a guild once, then every action only applies to that guild
+3. All guilds    ← guild interactions in every guild at once
+4. Back
+```
+
+| Action | Global | Guild | All guilds |
+|---|---|---|---|
+| List deployed | ✅ | ✅ (interactions specific to the guild) | ✅ (each guild interaction with its number of guilds and local file) |
+| List all available (global + guild) | | ✅ | |
+| List local files | ✅ | ✅ (files targeting the guild) | |
+| Deploy local | ✅ | ✅ (only to the chosen guild) | |
+| Add a guild interaction to the guild | | ✅ (guild files that do not target the guild yet) | |
+| Update | ✅ | ✅ (only in the chosen guild) | ✅ (in every guild it is deployed in) |
+| Delete | ✅ | ✅ (only from the chosen guild) | ✅ (from every guild, even without local file) |
+| Save deployed interactions into files | ✅ `generated_<folder>/` | ✅ `generated_<folder>/<guildId>/` | |
+| Count interactions per guild | | | ✅ |
+| Change guild | | ✅ | |
+
+After any "List" action, enter the numbers of the table (e.g. `0,2`) to see the details of these interactions, or press Enter to go back:
+```
+/wiki — Search the wiki   (Slash, guild, 111 → 1234…, 222 → not deployed)
+Permissions  : BanMembers
+Contexts     : SERVER_CHANNEL, BOT_DM
+Integration  : Discord default
+NSFW         : no
+Options:
+  ├─ search (SUB_COMMAND) — Search
+  │  ├─ query (STRING, required, length 1-100, autocomplete) — Query
+  │  └─ page (INTEGER, min 1) — Page
+  │     choices: First = 1
+  └─ random (SUB_COMMAND) — Random page
+```
+
 ## Deploy an interaction
 > - Once you have deployed an interaction, you can update/delete it using the cli
 
 > - The scope** of the interaction is determined while generating the file
 
-## List interactions
-> - List global interaction 
+> - A guild interaction file can target several guilds (`"id": {"guildA": null, "guildB": null}`) : deploy it from the Guild menu of each guild. The other guilds stay pending (`null`) in the file
 
-> - List spcific interaction for a guild
- 
-> - List all interactions (global and specific for a guild
-  
-> - Count the number of interaction by scope**
-
-> - Save global commands in json files
+> - To publish an already deployed guild interaction in another guild, open the Guild menu of that guild and use "Add a guild ... to this guild" : the guild is added to the file with its new ID, no need to edit the file by hand
 
 ## Update an interaction
 > - You can update any interaction, by updating the generated file inside the "**./handlers**" folder*

@@ -1,5 +1,6 @@
 import {BaseCLI} from "../BaseCLI";
-import {DiscordRegex} from "../../utils/DiscordRegex";
+import {GuildSelector} from "../GuildSelector";
+import {Env} from "../../Env";
 import {
     ContextMenuConfigGenerator,
     SlashCommandConfigGenerator,
@@ -73,15 +74,28 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
     }
 
 
-    protected async optionalGuildIds(): Promise<SpecificCommandId | undefined> {
-        const isCancel = (val: string) => !val.trim() || val.trim().toLowerCase() === 'none';
+    /**
+     * Lists the guilds of the bot and lets the user pick them by number.
+     * @returns the chosen guilds, not deployed yet, or {} to choose them later
+     */
+    protected async chooseGuilds(): Promise<SpecificCommandId> {
+        const guilds = await new GuildSelector(Env.token, this.input).list();
+        const later = 'Add it to a guild later with "Add a guild ... to this guild" in the Guild menu';
+        if (guilds.length === 0) {
+            console.log(`No guild found. ${later}`);
+            return {};
+        }
+
         const input = await this.input.requireInput(
-            "Guild IDs (separated by comma, or 'none' to cancel): ",
-            val => isCancel(val) || val.split(',').every(id => DiscordRegex.GUILD_ID.test(id.trim())),
+            "Guild numbers (separated by a comma), or leave empty to choose them later: ",
+            val => !val.trim() || (Utils.parseIndexList(val)?.every(i => i < guilds.length) ?? false),
             true
         );
-        if (isCancel(input)) return undefined;
-        return Object.fromEntries(input.split(',').map(id => [id.trim(), null]));
+        if (!input.trim()) {
+            console.log(later);
+            return {};
+        }
+        return Object.fromEntries(Utils.parseIndexList(input)!.map(i => [guilds[i]!.id, null]));
     }
 
     /**

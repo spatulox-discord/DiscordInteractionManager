@@ -1,4 +1,5 @@
 import {CommandType, Interaction} from "../type/InteractionType";
+import {DiscordRegex} from "../../utils/DiscordRegex";
 
 export class InteractionValidator {
     static validate(data: unknown): Interaction {
@@ -28,14 +29,27 @@ export class InteractionValidator {
             if (!cmd.id || typeof cmd.id !== 'object' || Array.isArray(cmd.id)) {
                 throw new Error(`Expected guild 'id' Record<string, string|null>, got ${typeof cmd.id}`);
             }
+            for (const [guildId, commandId] of Object.entries(cmd.id)) {
+                if (!DiscordRegex.GUILD_ID.test(guildId)) {
+                    throw new Error(`Expected guild IDs as keys of 'id', got ${JSON.stringify(guildId)}`);
+                }
+                if (commandId !== null && !this.isDiscordId(commandId)) {
+                    throw new Error(`Expected the ID in guild ${guildId} to be null or a Discord ID, got ${JSON.stringify(commandId)}`);
+                }
+            }
         } else if (cmd.command_scope === 'global') {
-            if (cmd.id !== undefined && typeof cmd.id !== 'string') {
-                throw new Error(`Expected global 'id' string|undefined, got ${typeof cmd.id}`);
+            // Older generators wrote "id": "" for interactions that are not deployed yet
+            if (cmd.id !== undefined && cmd.id !== "" && !this.isDiscordId(cmd.id)) {
+                throw new Error(`Expected global 'id' to be a Discord ID or missing, got ${JSON.stringify(cmd.id)}`);
             }
         } else {
             throw new Error(`Expected 'command_scope' 'guild'|'global', got ${cmd.command_scope}`);
         }
 
         return cmd as unknown as Interaction;
+    }
+
+    private static isDiscordId(value: unknown): boolean {
+        return typeof value === 'string' && DiscordRegex.SNOWFLAKE.test(value);
     }
 }

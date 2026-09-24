@@ -1,6 +1,6 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
-import {BaseCLI, MenuSelectionCLI} from "./BaseCLI";
+import {BaseCLI, MenuSelectionCLI, NO_PAUSE} from "./BaseCLI";
 import {Prompt} from "./utils/Prompt";
 
 let answers: string[] = [];
@@ -21,6 +21,7 @@ class ChildMenu extends BaseCLI {
         {label: "Action", action: async () => { this.calls++; }},
         {label: "Back", action: () => this.goBack()},
         {label: "Crash", action: async () => { throw new Error("boom"); }},
+        {label: "Already paused", action: async () => { this.calls++; return NO_PAUSE; }},
     ];
     run() { return this.showMainMenu(); }
 }
@@ -54,6 +55,16 @@ describe("BaseCLI navigation", () => {
 
         assert.equal(menu.calls, 1);
         assert.equal(error.mock.callCount(), 1);
+        assert.deepEqual(answers, []);
+    });
+
+    it("skips the pause when the action already waited", async () => {
+        answers = ["4", "2"];
+        const menu = new ChildMenu();
+
+        await menu.run();
+
+        assert.equal(menu.calls, 1);
         assert.deepEqual(answers, []);
     });
 

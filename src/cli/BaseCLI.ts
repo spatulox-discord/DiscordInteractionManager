@@ -2,6 +2,8 @@ import {Env} from "../Env";
 import {Prompt} from "./utils/Prompt";
 
 export const BACK = Symbol("back");
+// Returned by an action that already waited for the user, to skip "Press Enter to continue"
+export const NO_PAUSE = Symbol("no pause");
 
 export type MenuSelectionCLI = {
     label: string;
@@ -42,6 +44,7 @@ export abstract class BaseCLI {
                 try {
                     const result = await option.action();
                     if (result === BACK) return;
+                    if (result === NO_PAUSE) continue;
                     if (result instanceof BaseCLI) {
                         await result.showMainMenu();
                         continue;
@@ -76,11 +79,17 @@ export abstract class BaseCLI {
         console.log('  Files whose name starts with "example" are ignored');
 
         console.log('');
-        console.log('🎯 Features:');
-        console.log('  📊 1. List Remote    → Show deployed commands on Discord');
-        console.log('  🚀 2. Deploy Local   → Deploy local JSON files → Discord');
-        console.log('  🔄 3. Update Remote  → Update Discord commands based on local JSON file');
-        console.log('  🗑️ 4. Delete Remote → Remove Discord commands based on local JSON file');
+        console.log('🎯 Features (Manage Interactions → Command / ContextMenu Manager):');
+        console.log('  🌍 Global → Global interactions only');
+        console.log('  🏠 Guild  → Choose a guild once, every action only applies to that guild');
+        console.log('  🌐 All guilds → Guild interactions in every guild: list with their number of guilds, count per guild, update in all their guilds, delete from all guilds');
+        console.log('  In the Global and Guild menus:');
+        console.log('  📊 List    → Show deployed interactions on Discord, or local JSON files, then enter numbers to see their details');
+        console.log('  🚀 Deploy  → Deploy local JSON files → Discord');
+        console.log('  🔄 Update  → Update Discord interactions based on local JSON files');
+        console.log('  🗑️ Delete  → Remove Discord interactions and their ID from local JSON files');
+        console.log('  💾 Save    → Save deployed interactions into generated_* JSON files');
+        console.log('  The Guild menu can also add a guild interaction to the guild and list everything available in the guild');
 
         console.log('');
         console.log('🎮 Selection:');

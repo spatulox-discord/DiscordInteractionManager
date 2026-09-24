@@ -71,11 +71,8 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         console.clear();
         console.log("⚙️ 6/7 - Guild Specific");
         if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
-            const id = await this.optionalGuildIds();
-            if(id) {
-                config.command_scope = "guild"
-                config.id = id
-            }
+            config.command_scope = "guild"
+            config.id = await this.chooseGuilds()
         }
 
         console.clear();

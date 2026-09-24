@@ -1,6 +1,7 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
+import {GuildSelector} from "../GuildSelector";
 import {CommandOption, DiscordOptionType, InteractionContextType} from "../type/InteractionType";
 
 function scripted(answers: string[]): any {
@@ -154,6 +155,12 @@ describe("InteractionGeneratorCLI index lists", () => {
         assert.deepEqual(await scripted(answers).addChannelTypes(), [0, 2]);
         assert.deepEqual(answers, []);
     });
+
+    it("accepts stage channels and rejects DM channel types", async () => {
+        const answers = ["1", "3", "13"];
+        assert.deepEqual(await scripted(answers).addChannelTypes(), [13]);
+        assert.deepEqual(answers, []);
+    });
 });
 
 describe("InteractionGeneratorCLI.selectEnumValues", () => {
@@ -171,5 +178,30 @@ describe("InteractionGeneratorCLI.selectEnumValues", () => {
         const answers = ["3", "2,0"];
         assert.deepEqual(await select(answers), [2, 0]);
         assert.deepEqual(answers, []);
+    });
+});
+
+describe("InteractionGeneratorCLI.chooseGuilds", () => {
+    const guilds = [{id: "111", name: "A"}, {id: "222", name: "B"}];
+
+    beforeEach(() => {
+        process.env.DISCORD_BOT_TOKEN ||= "token";
+    });
+
+    it("targets the chosen guilds", async () => {
+        mock.method(GuildSelector.prototype, "list", async () => guilds);
+        const answers = ["2", "1,0"];
+        assert.deepEqual(await scripted(answers).chooseGuilds(), {"222": null, "111": null});
+        assert.deepEqual(answers, []);
+    });
+
+    it("lets the guilds be chosen later", async () => {
+        mock.method(GuildSelector.prototype, "list", async () => guilds);
+        assert.deepEqual(await scripted([""]).chooseGuilds(), {});
+    });
+
+    it("does not ask anything when the bot is in no guild", async () => {
+        mock.method(GuildSelector.prototype, "list", async () => []);
+        assert.deepEqual(await scripted([]).chooseGuilds(), {});
     });
 });

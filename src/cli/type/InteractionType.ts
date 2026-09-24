@@ -31,14 +31,15 @@ export enum DiscordOptionType {
     ATTACHMENT
 }
 
-export enum ChannelType { // DM and GroupDM are missing for a reason
+export enum ChannelType { // DM, GroupDM and Directory (hub only) are missing for a reason
     Text = 0,
     Voice = 2,
     Category = 4,
     Announcement = 5,
-    ThreadPublic = 10,
-    ThreadPublicAnnouncement = 11,
+    ThreadAnnouncement = 10,
+    ThreadPublic = 11,
     ThreadPrivate = 12,
+    StageVoice = 13,
     Forum = 15,
     Media = 16
 }

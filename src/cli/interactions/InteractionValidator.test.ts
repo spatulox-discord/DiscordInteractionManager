@@ -20,6 +20,28 @@ describe("InteractionValidator.validate", () => {
         assert.deepEqual(InteractionValidator.validate(data), data);
     });
 
+    it("accepts Discord IDs", () => {
+        const guild = {name: "a", type: 2, command_scope: "guild", id: {"123456789012345678": "1234567890123456789", "81384788765712384": null}};
+        const global = {name: "a", type: 2, command_scope: "global", id: "1234567890123456789"};
+        assert.deepEqual(InteractionValidator.validate(guild), guild);
+        assert.deepEqual(InteractionValidator.validate(global), global);
+        assert.deepEqual(InteractionValidator.validate({name: "a", type: 2, command_scope: "guild", id: {}}), {name: "a", type: 2, command_scope: "guild", id: {}});
+    });
+
+    it("still accepts the empty global ID written by older generators", () => {
+        const data = {name: "a", type: 2, command_scope: "global", id: ""};
+        assert.deepEqual(InteractionValidator.validate(data), data);
+    });
+
+    it("rejects invalid guild and command IDs", () => {
+        for (const id of [{"12345": null}, {"my-guild": null}, {"123456789012345678": 42}, {"123456789012345678": "abc"}, {"123456789012345678": ""}]) {
+            assert.throws(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "guild", id}), JSON.stringify(id));
+        }
+        for (const id of ["abc", "123", 1234567890123456789]) {
+            assert.throws(() => InteractionValidator.validate({name: "a", type: 2, command_scope: "global", id}), String(id));
+        }
+    });
+
     it("rejects invalid data", () => {
         assert.throws(() => InteractionValidator.validate(false));
         assert.throws(() => InteractionValidator.validate({type: 1, description: "x", command_scope: "global"}));
