@@ -112,6 +112,15 @@ describe("BaseInteractionManager.deploy", () => {
         assert.deepEqual((await readCommand("ping.json")).id, {"111": "c1", "222": "c2"});
     });
 
+    it("adds a guild to a command generated without guild", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {}});
+        const {manager} = createManager(() => ({id: "c2"}));
+
+        await manager.deploy(await manager.listFromFile(Listing.ADDABLE, "222"));
+
+        assert.deepEqual((await readCommand("ping.json")).id, {"222": "c2"});
+    });
+
     it("does not add the guild when Discord refuses the deployment", async () => {
         await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1"}});
         const {manager} = createManager(() => { throw new Error("Missing Access"); });
