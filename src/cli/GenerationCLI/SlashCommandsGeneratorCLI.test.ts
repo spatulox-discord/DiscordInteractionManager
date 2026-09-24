@@ -78,11 +78,22 @@ describe("SlashCommandGeneratorCLI.handleOptionType", () => {
     });
 
     it("never accepts a maximum value below the minimum value", async () => {
-        const answers = ["-2", "-3", "-2", "n"];
+        const answers = ["n", "-2", "-3", "-2", "n"];
         const option: any = {};
         await scripted(answers).handleOptionType(option, DiscordOptionType.INTEGER);
         assert.deepEqual(answers, []);
         assert.equal(option.max_value, -2);
+    });
+});
+
+describe("SlashCommandGeneratorCLI numeric autocomplete", () => {
+    it("offers autocomplete and then skips choices", async () => {
+        const answers = ["y", "", ""];
+        const option: any = {};
+        await scripted(answers).handleOptionType(option, DiscordOptionType.NUMBER);
+        assert.deepEqual(answers, []);
+        assert.equal(option.autocomplete, true);
+        assert.equal(option.choices, undefined);
     });
 });
 
