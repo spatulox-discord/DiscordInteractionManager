@@ -53,9 +53,9 @@ export abstract class BaseCLI {
     protected async showHelp(): Promise<void> {
         console.clear();
         console.log('');
-        console.log('||| HELP - Discord Bot Command Manager CLI |||');
+        console.log('||| HELP - Discord Interaction Manager CLI |||');
         console.log('');
-        console.log('🔗 Wiki: https://github.com/Spatulox/DiscordInteractionManager/wiki');
+        console.log('🔗 Wiki: https://github.com/spatulox-discord/DiscordInteractionManager/wiki');
         console.log('═'.repeat(80));
         console.log('🤖 What it does:');
         console.log('  • Manage your Discord interactions (slash commands & context menus) via an interactive CLI');
@@ -83,8 +83,8 @@ export abstract class BaseCLI {
         console.log('  • Enter: "1,3,5" or "all" to select which interaction you want to apply the action');
 
         console.log('');
-        console.log('🔗 Wiki: https://github.com/Spatulox/DiscordInteractionManager/wiki');
-        console.log('🔗 Bugs: https://github.com/Spatulox/DiscordInteractionManager/issues')
+        console.log('🔗 Wiki: https://github.com/spatulox-discord/DiscordInteractionManager/wiki');
+        console.log('🔗 Bugs: https://github.com/spatulox-discord/DiscordInteractionManager/issues')
         console.log('═'.repeat(80));
     }
 
