@@ -18,11 +18,20 @@ const DISCORD_FIELDS = [
 
 const SLASH_ONLY_FIELDS = ['description', 'description_localizations', 'options'] as const;
 
+// PATCH only edits the fields it receives: send their defaults so a field removed locally is also removed on Discord
+const PATCH_DEFAULTS = {name_localizations: null, nsfw: false, contexts: null};
+const SLASH_PATCH_DEFAULTS = {description_localizations: null, options: []};
+
 export class InteractionPayload {
     static toDiscord(cmd: Interaction): Record<string, unknown> {
         const payload = this.pickDiscordFields(cmd as unknown as Record<string, unknown>);
         payload.default_member_permissions = this.resolvePermissions(cmd);
         return payload;
+    }
+
+    static toDiscordPatch(cmd: Interaction): Record<string, unknown> {
+        const defaults = cmd.type === CommandType.SLASH ? {...PATCH_DEFAULTS, ...SLASH_PATCH_DEFAULTS} : PATCH_DEFAULTS;
+        return {...defaults, ...this.toDiscord(cmd)};
     }
 
     /**

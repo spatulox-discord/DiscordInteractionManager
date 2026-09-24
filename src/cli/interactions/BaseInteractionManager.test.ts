@@ -84,6 +84,17 @@ describe("BaseInteractionManager.update", () => {
         assert.equal((await readCommand("pong.json")).description, "New pong");
     });
 
+    it("removes on Discord the options removed from the local file", async () => {
+        const ping = {name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"};
+        await writeCommand("ping.json", ping);
+        const {manager, calls} = createManager();
+
+        await manager.update([{...ping, filename: "ping.json"} as any], null);
+
+        assert.deepEqual((calls[0]!.body as any).options, []);
+        assert.equal((calls[0]!.body as any).default_member_permissions, null);
+    });
+
     it("updates every guild even when one of them fails", async () => {
         const local = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": "c2", "333": null}};
         await writeCommand("ping.json", local);

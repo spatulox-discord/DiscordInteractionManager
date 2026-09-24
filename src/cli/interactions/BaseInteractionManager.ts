@@ -331,7 +331,7 @@ export abstract class BaseInteractionManager {
                 fileCmd = await this.readInteraction(filePath);
             }
 
-            const body = InteractionPayload.toDiscord(cmd);
+            const body = InteractionPayload.toDiscordPatch(cmd);
             this.syncPermissions(cmd, body);
 
             try {

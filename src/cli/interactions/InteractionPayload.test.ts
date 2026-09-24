@@ -83,6 +83,31 @@ describe("InteractionPayload.toDiscord", () => {
     });
 });
 
+describe("InteractionPayload.toDiscordPatch", () => {
+    it("resets the fields removed from the local file", () => {
+        const cmd = {name: "ping", type: 1, description: "Ping", command_scope: "global"} as unknown as Interaction;
+        assert.deepEqual(InteractionPayload.toDiscordPatch(cmd), {
+            name: "ping", type: 1, description: "Ping",
+            name_localizations: null, description_localizations: null, options: [],
+            nsfw: false, contexts: null, default_member_permissions: null,
+        });
+    });
+
+    it("keeps the local values", () => {
+        const options = [{type: 3, name: "query", description: "Query"}];
+        const cmd = {name: "ping", type: 1, description: "Ping", command_scope: "global", options, nsfw: true} as unknown as Interaction;
+        const payload = InteractionPayload.toDiscordPatch(cmd);
+        assert.deepEqual(payload.options, options);
+        assert.equal(payload.nsfw, true);
+    });
+
+    it("never resets slash only fields of a context menu", () => {
+        const cmd = {name: "Report", type: 3, command_scope: "global"} as unknown as Interaction;
+        const payload = InteractionPayload.toDiscordPatch(cmd);
+        assert.equal("options" in payload || "description_localizations" in payload, false);
+    });
+});
+
 describe("InteractionPayload.fromDiscord", () => {
     const base = {id: "c1", application_id: "app", version: "v1", dm_permission: true, default_member_permissions: null};
 
