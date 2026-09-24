@@ -55,4 +55,9 @@ describe("InteractionPayload.toDiscord", () => {
         const cmd = {name: "a", type: 3, command_scope: "global", default_member_permissions: 1099511635968} as unknown as Interaction;
         assert.equal(InteractionPayload.toDiscord(cmd).default_member_permissions, "1099511635968");
     });
+
+    it("never sends a description or options for context menus", () => {
+        const cmd = {name: "Report", type: 3, description: "Context menu", options: [], command_scope: "global"} as unknown as Interaction;
+        assert.deepEqual(InteractionPayload.toDiscord(cmd), {name: "Report", type: 3});
+    });
 });

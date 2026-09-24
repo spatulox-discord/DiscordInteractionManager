@@ -1,4 +1,4 @@
-import {Interaction} from "../type/InteractionType";
+import {CommandType, Interaction} from "../type/InteractionType";
 import {Utils} from "../utils/Utils";
 
 const DISCORD_FIELDS = [
@@ -16,12 +16,17 @@ const DISCORD_FIELDS = [
     'nsfw',
 ] as const;
 
+const SLASH_ONLY_FIELDS = ['description', 'description_localizations', 'options'] as const;
+
 export class InteractionPayload {
     static toDiscord(cmd: Interaction): Record<string, unknown> {
         const source = cmd as unknown as Record<string, unknown>;
         const payload: Record<string, unknown> = {};
 
         for (const field of DISCORD_FIELDS) {
+            if (cmd.type !== CommandType.SLASH && (SLASH_ONLY_FIELDS as readonly string[]).includes(field)) {
+                continue;
+            }
             if (source[field] !== undefined) {
                 payload[field] = source[field];
             }
