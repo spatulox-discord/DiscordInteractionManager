@@ -1,5 +1,6 @@
 import {Env} from "../Env";
 import {Prompt} from "./utils/Prompt";
+import {InteractionIntegrationType} from "./type/InteractionType";
 
 export const BACK = Symbol("back");
 // Returned by an action that already waited for the user, to skip "Press Enter to continue"
@@ -15,6 +16,7 @@ export type MenuSelectionCLI = {
 export abstract class BaseCLI {
     protected static botName = "Unknown Bot";
     protected static applicationId = "";
+    protected static integrationTypes: InteractionIntegrationType[] = [InteractionIntegrationType.GUILD_INSTALL];
 
     constructor(parent?: BaseCLI, protected readonly input: Prompt = parent?.input ?? new Prompt()) {}
 

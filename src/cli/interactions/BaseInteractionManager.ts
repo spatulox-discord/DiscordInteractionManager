@@ -11,6 +11,7 @@ import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
 import {
     Interaction,
+    InteractionIntegrationType,
     OnlineInteractionConfig,
     SpecificCommandId
 } from "../type/InteractionType";
@@ -26,7 +27,10 @@ export abstract class BaseInteractionManager {
     protected clientId: string;
     protected rest: REST;
 
-    constructor(clientId: string, token: string) {
+    /**
+     * @param integrationTypes the integration types configured for the application, sent when a file has none
+     */
+    constructor(clientId: string, token: string, private readonly integrationTypes: InteractionIntegrationType[] = [InteractionIntegrationType.GUILD_INSTALL]) {
         this.clientId = clientId;
         this.rest = new REST({ version: '10' }).setToken(token);
     }
@@ -387,7 +391,7 @@ export abstract class BaseInteractionManager {
             }
 
             try {
-                const body = InteractionPayload.toDiscordPatch(cmd);
+                const body = InteractionPayload.toDiscordPatch(cmd, this.integrationTypes);
                 this.syncPermissions(cmd, body);
 
                 // Case 1: Specific Guild

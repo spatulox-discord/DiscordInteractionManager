@@ -1,4 +1,5 @@
-import {CommandType, Interaction, OnlineInteractionConfig} from "../type/InteractionType";
+import {RESTGetCurrentApplicationResult} from "discord-api-types/v10";
+import {CommandType, Interaction, InteractionIntegrationType, OnlineInteractionConfig} from "../type/InteractionType";
 import {Utils} from "../utils/Utils";
 
 const DISCORD_FIELDS = [
@@ -29,9 +30,20 @@ export class InteractionPayload {
         return payload;
     }
 
-    static toDiscordPatch(cmd: Interaction): Record<string, unknown> {
+    /**
+     * @param integrationTypes Discord's default integration types, the ones configured for the application.
+     * Only global interactions have integration types
+     */
+    static toDiscordPatch(cmd: Interaction, integrationTypes: InteractionIntegrationType[] = [InteractionIntegrationType.GUILD_INSTALL]): Record<string, unknown> {
         const defaults = cmd.type === CommandType.SLASH ? {...PATCH_DEFAULTS, ...SLASH_PATCH_DEFAULTS} : PATCH_DEFAULTS;
-        return {...defaults, ...this.toDiscord(cmd)};
+        const scopeDefaults = cmd.command_scope === "global" ? {integration_types: integrationTypes} : {};
+        return {...defaults, ...scopeDefaults, ...this.toDiscord(cmd)};
+    }
+
+    // The installation types enabled in the Developer Portal, which Discord uses when an interaction has none
+    static defaultIntegrationTypes(application: RESTGetCurrentApplicationResult): InteractionIntegrationType[] {
+        const types = Object.keys(application.integration_types_config ?? {}).map(Number);
+        return types.length > 0 ? types : [InteractionIntegrationType.GUILD_INSTALL];
     }
 
     /**

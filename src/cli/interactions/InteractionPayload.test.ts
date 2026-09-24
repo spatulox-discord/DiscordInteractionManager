@@ -89,8 +89,21 @@ describe("InteractionPayload.toDiscordPatch", () => {
         assert.deepEqual(InteractionPayload.toDiscordPatch(cmd), {
             name: "ping", type: 1, description: "Ping",
             name_localizations: null, description_localizations: null, options: [],
-            nsfw: false, contexts: null, default_member_permissions: null,
+            nsfw: false, contexts: null, integration_types: [0], default_member_permissions: null,
         });
+    });
+
+    it("resets the integration types to the ones of the application", () => {
+        const cmd = {name: "ping", type: 1, description: "Ping", command_scope: "global"} as unknown as Interaction;
+        assert.deepEqual(InteractionPayload.toDiscordPatch(cmd, [0, 1]).integration_types, [0, 1]);
+
+        const local = {...cmd, integration_types: [1]} as unknown as Interaction;
+        assert.deepEqual(InteractionPayload.toDiscordPatch(local, [0, 1]).integration_types, [1]);
+    });
+
+    it("never sends integration types for guild interactions", () => {
+        const cmd = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {}} as unknown as Interaction;
+        assert.equal("integration_types" in InteractionPayload.toDiscordPatch(cmd, [0, 1]), false);
     });
 
     it("keeps the local values", () => {
@@ -105,6 +118,17 @@ describe("InteractionPayload.toDiscordPatch", () => {
         const cmd = {name: "Report", type: 3, command_scope: "global"} as unknown as Interaction;
         const payload = InteractionPayload.toDiscordPatch(cmd);
         assert.equal("options" in payload || "description_localizations" in payload, false);
+    });
+});
+
+describe("InteractionPayload.defaultIntegrationTypes", () => {
+    it("reads the installation types of the application", () => {
+        const application = {integration_types_config: {"0": {}, "1": {}}} as any;
+        assert.deepEqual(InteractionPayload.defaultIntegrationTypes(application), [0, 1]);
+    });
+
+    it("falls back to the guild installation", () => {
+        assert.deepEqual(InteractionPayload.defaultIntegrationTypes({} as any), [0]);
     });
 });
 
