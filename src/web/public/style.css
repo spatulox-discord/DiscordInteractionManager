@@ -262,7 +262,7 @@ dialog {
     max-width: 480px;
 }
 dialog::backdrop { background: rgb(0 0 0 / .4); }
-dialog .actions { justify-content: flex-end; margin-top: 16px; }
+#confirm .actions { justify-content: flex-end; margin-top: 16px; }
 
 /* ---- Editor window, over the content next to the sidebar ---- */
 
