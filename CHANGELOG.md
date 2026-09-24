@@ -13,6 +13,7 @@ Date format : dd/mm/yyyy
     - An "All guilds" menu next to Global and Guild : lists each guild interaction with the number of guilds it is deployed in (from Discord, with its local file and details), counts interactions per guild, updates guild interactions in all their guilds and deletes them from every guild (even without local file)
     - Local files are checked when read : guild IDs (keys of `id`) and interaction IDs must be Discord IDs, so a mistyped ID is reported with the file name instead of failing on Discord. The empty global `"id": ""` written by older generators is still accepted
     - "Add a guild ... to this guild" in the Guild menu : deploys a guild interaction to a guild it does not target yet, and adds the guild with its new ID to the local file
+    - Deleting interactions asks for a confirmation that names them
 - Change :
     - `DISCORD_BOT_CLIENTID` is no longer needed : the application ID is fetched from Discord with the token (`GET /applications/@me`)
     - `discord.js` is no longer needed : the CLI only depends on `@discordjs/rest` and `discord-api-types`, now declared as dependencies (they were only installed through `discord.js`, which broke with pnpm / Yarn PnP)

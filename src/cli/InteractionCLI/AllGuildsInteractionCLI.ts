@@ -34,7 +34,7 @@ export class AllGuildsInteractionCLI extends ScopeInteractionCLI {
     // Lists from Discord, so interactions without a local file can be deleted too
     private async handleDeleteAll(): Promise<void> {
         const selected = await this.selectCommands(await this.fetchPerGuild());
-        if (selected.length === 0) return;
+        if (!await this.confirmDeletion(selected, "from every guild they are deployed in")) return;
         await this.manager.delete(selected, null);
     }
 

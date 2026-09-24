@@ -47,8 +47,17 @@ export abstract class ScopeInteractionCLI extends BaseCLI {
     protected async handleDelete(guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         const commands = guild ? await this.manager.listGuild(guild.id) : await this.manager.list();
         const selected = await this.selectCommands(commands);
-        if (selected.length === 0) return;
+        if (!await this.confirmDeletion(selected, guild ? `from guild "${guild.name}"` : "globally")) return;
         await this.manager.delete(selected, guild);
+    }
+
+    // A deletion cannot be undone, and "all" selects everything at once
+    protected async confirmDeletion(selected: Interaction[], where: string): Promise<boolean> {
+        if (selected.length === 0) return false;
+        const names = selected.map(cmd => cmd.name).join(", ");
+        if (await this.input.yesNoInput(`Delete ${names} ${where}? (y/n): `)) return true;
+        console.log("Cancelled");
+        return false;
     }
 
     protected async selectCommands(commands: Interaction[]): Promise<Interaction[]> {

@@ -44,6 +44,35 @@ describe("ScopeInteractionCLI.selectCommands", () => {
     });
 });
 
+describe("ScopeInteractionCLI.handleDelete", () => {
+    const ping = {name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"};
+
+    async function deleteGlobal(answers: string[]) {
+        const deleted: unknown[][] = [];
+        const fakeManager = {
+            folderPath: "commands",
+            list: async () => [ping],
+            delete: async (...args: unknown[]) => { deleted.push(args); },
+        };
+        const cli = new GlobalInteractionCLI(undefined as any, fakeManager as any, "CommandManager") as any;
+        const questions: string[] = [];
+        cli.input.ask = async (question: string) => { questions.push(question); return answers.shift(); };
+        await cli.handleDelete(null);
+        return {deleted, questions};
+    }
+
+    it("names what will be deleted before deleting it", async () => {
+        const {deleted, questions} = await deleteGlobal(["0", "y"]);
+        assert.equal(questions[1], "Delete ping globally? (y/n): ");
+        assert.deepEqual(deleted, [[[ping], null]]);
+    });
+
+    it("deletes nothing when the deletion is not confirmed", async () => {
+        const {deleted} = await deleteGlobal(["all", "n"]);
+        assert.deepEqual(deleted, []);
+    });
+});
+
 describe("ScopeInteractionCLI.offerDetails", () => {
     it("shows the chosen details until Enter is pressed", async () => {
         const answers = ["5", "1", ""];
@@ -124,7 +153,7 @@ describe("InteractionManagerCLI", () => {
 describe("AllGuildsInteractionCLI", () => {
     const ping = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": "c2"}};
 
-    function allGuilds(calls: unknown[][]) {
+    function allGuilds(calls: unknown[][], answers: string[] = ["0"]) {
         const fakeManager = {
             folderPath: "commands",
             listFromFile: async (...args: unknown[]) => { calls.push(["listFromFile", ...args]); return [ping]; },
@@ -133,7 +162,7 @@ describe("AllGuildsInteractionCLI", () => {
             delete: async (...args: unknown[]) => { calls.push(["delete", ...args]); },
         };
         const cli = new AllGuildsInteractionCLI(undefined as any, fakeManager as any, "CommandManager") as any;
-        cli.input.ask = async () => "0";
+        cli.input.ask = async () => answers.shift();
         return cli;
     }
 
@@ -151,7 +180,13 @@ describe("AllGuildsInteractionCLI", () => {
 
     it("deletes the commands listed from Discord from all their guilds", async () => {
         const calls: unknown[][] = [];
-        await allGuilds(calls).handleDeleteAll();
+        await allGuilds(calls, ["0", "y"]).handleDeleteAll();
         assert.deepEqual(calls, [["listPerGuild", [guild]], ["delete", [ping], null]]);
+    });
+
+    it("deletes nothing when the deletion is not confirmed", async () => {
+        const calls: unknown[][] = [];
+        await allGuilds(calls, ["all", "n"]).handleDeleteAll();
+        assert.deepEqual(calls, [["listPerGuild", [guild]]]);
     });
 });
