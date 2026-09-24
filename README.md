@@ -145,7 +145,7 @@ Options:
       
 >   - **Normal update will not work**
 
-> - If you want to update the permission of the interaction, you need to update the "**default_member_permissions_string**" field with the keyof **PermissionBitFields** of discordjs (or let it empty for everyone), it will automatically update the "**default_member_permissions**" field required by Discord
+> - If you want to update the permission of the interaction, you need to update the "**default_member_permissions_string**" field with the names of **PermissionFlagsBits** (discord-api-types, the same as discord.js) (or let it empty for everyone), it will automatically update the "**default_member_permissions**" field required by Discord. An unknown name (names are case sensitive) makes the file invalid, and it is reported instead of being deployed
 
 > - If the "**default_member_permissions_string**" field doesn't exist for some reason, you can create it or go to the [Discord Dev potal](https://discord.com/developers/applications/), in any of your app, go to the "Bot" tab and then check any of the "BotPermission" you want for the interaction and then copy the "Permission Integer" to paste it inside the "**default_member_permissions**" field inside the json of the interaction 
 
