@@ -1,6 +1,22 @@
 # Changelog
 Date format : dd/mm/yyyy
 
+### 24/09/2026 - 2.3.2
+- Change :
+    - Ctrl+C quits the CLI right away (exit code 130), even during a deployment or a listing of every guild, and Ctrl+D or the end of a piped input quits it too (exit code 0)
+    - Interactions saved from Discord without permission no longer get an empty `default_member_permissions_string`, so their `default_member_permissions` can be edited
+    - Deploying or updating a file whose empty `default_member_permissions_string` clears its `default_member_permissions` shows a warning
+    - "Save ... into local files" adds `_` before the file name of an interaction named like a Windows device (`aux` is saved as `_aux.json`)
+- Fix :
+    - An interaction deleted outside of the CLI (Developer Portal, another tool, the bot itself) kept its ID in the local file : Deploy skipped it, Update failed every time and Delete did not list it. When Discord answers that it no longer exists (404) to a delete or an update, its ID is now removed from the local file
+    - Setting `default_member_permissions` in a file saved from Discord had no effect : its empty `default_member_permissions_string` won, the interaction was deployed for everyone and the bitfield was cleared
+    - Removing `integration_types` from a global interaction file kept the old value on Discord after an update : it is now reset to the installation types of the application, as Discord does for a new interaction
+    - Ctrl+C did not stop the running action, then the CLI stopped with `❌ readline was closed`
+    - Deploy and Update overwrote the edits made to a local file while choosing the interactions : only the IDs and the permission bitfield are now written in the file
+    - The generators accepted `.json` as file name, and the file could not be saved at the end
+    - The generators accepted file names Windows cannot write (`: * ? " < > |`, device names such as `CON` or `aux`), and the file could not be saved at the end
+    - In the All guilds menu, when several files define the same name for different guilds, the same file was shown for every guild : the file holding one of its IDs, or else targeting one of its guilds, is now shown
+
 ### 24/09/2026 - 2.3.0
 - Add :
     - Deleting interactions asks for a confirmation that names them
