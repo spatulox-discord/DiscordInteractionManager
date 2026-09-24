@@ -154,6 +154,12 @@ describe("InteractionGeneratorCLI index lists", () => {
         assert.deepEqual(await scripted(answers).addChannelTypes(), [0, 2]);
         assert.deepEqual(answers, []);
     });
+
+    it("accepts stage channels and rejects DM channel types", async () => {
+        const answers = ["1", "3", "13"];
+        assert.deepEqual(await scripted(answers).addChannelTypes(), [13]);
+        assert.deepEqual(answers, []);
+    });
 });
 
 describe("InteractionGeneratorCLI.selectEnumValues", () => {

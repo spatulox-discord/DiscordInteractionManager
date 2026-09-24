@@ -8,6 +8,7 @@ Date format : dd/mm/yyyy
     - `NUMBER` options can have choices
     - `engines` : Node `>=18`, required by `@discordjs/rest`
     - The optional variables (`DISCORD_INTERACTION_FOLDER`, `DISCORD_BOT_DEV`) are documented in `.env.example`
+    - Stage channels (`13`) can be chosen in the channel types of a `CHANNEL` option
 - Change :
     - `DISCORD_BOT_CLIENTID` is no longer needed : the application ID is fetched from Discord with the token (`GET /applications/@me`)
     - `discord.js` is no longer needed : the CLI only depends on `@discordjs/rest` and `discord-api-types`, now declared as dependencies (they were only installed through `discord.js`, which broke with pnpm / Yarn PnP)
@@ -28,6 +29,7 @@ Date format : dd/mm/yyyy
     - The Command and ContextMenu managers start with a Global / Guild choice. Global only handles global interactions (deploying no longer deploys guild files, updating no longer updates every guild). Guild asks for the guild once and every action only applies to it. The separate List menu and the "y=global/n=specific" questions are gone, and guild interactions saved from Discord go to `generated_<folder>/<guildId>/`
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
+    - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator
     - Context menus are never sent with a description or options (Discord rejects them)
     - "Save global ... into local file" dropped the options, the `nsfw` flag and the localizations of slash commands
     - A failed deletion on Discord still removed the ID from the local file
