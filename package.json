@@ -1,6 +1,6 @@
 {
   "name": "@spatulox/discord-interaction-manager",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "author": "Spatulox",
   "description": "discord-interaction-manager is a lightweight CLI tool to manage Discord bot interactions (slash commands, context menus) in under 30 seconds. Deploy, update, delete, and generate interaction files with an interactive terminal interface.",
   "bin": {
