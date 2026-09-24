@@ -1,4 +1,4 @@
-import {REST} from '@discordjs/rest';
+import {DiscordAPIError, REST} from '@discordjs/rest';
 import {
     RESTAPIPartialCurrentUserGuild,
     RESTGetCurrentApplicationResult,
@@ -11,6 +11,7 @@ import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
 import {
     Interaction,
+    InteractionIntegrationType,
     OnlineInteractionConfig,
     SpecificCommandId
 } from "../type/InteractionType";
@@ -26,7 +27,10 @@ export abstract class BaseInteractionManager {
     protected clientId: string;
     protected rest: REST;
 
-    constructor(clientId: string, token: string) {
+    /**
+     * @param integrationTypes the integration types configured for the application, sent when a file has none
+     */
+    constructor(clientId: string, token: string, private readonly integrationTypes: InteractionIntegrationType[] = [InteractionIntegrationType.GUILD_INSTALL]) {
         this.clientId = clientId;
         this.rest = new REST({ version: '10' }).setToken(token);
     }
@@ -276,11 +280,24 @@ export abstract class BaseInteractionManager {
         }
 
         const commands = [...merged.values()];
-        for (const {cmd, file} of await this.readGuildFiles()) {
-            const remote = commands.find(c => c.type === cmd.type && c.name === cmd.name);
-            if (remote) remote.filename = file;
+        const files = await this.readGuildFiles();
+        for (const remote of commands) {
+            remote.filename = BaseInteractionManager.findLocalFile(remote, files);
         }
         return commands;
+    }
+
+    /**
+     * Several files can define the same name for different guilds: the file holding one of its IDs,
+     * or else targeting one of its guilds, is the one of this interaction.
+     */
+    private static findLocalFile(remote: Interaction & { command_scope: "guild" }, files: { cmd: Interaction, file: string }[]): string | undefined {
+        const guildIds = Object.keys(remote.id);
+        const candidates = files.flatMap(({cmd, file}) =>
+            cmd.command_scope === "guild" && cmd.type === remote.type && cmd.name === remote.name ? [{ids: cmd.id, file}] : []);
+        const holdsId = candidates.find(({ids}) => guildIds.some(guildId => ids[guildId] === remote.id[guildId]));
+        const targetsGuild = candidates.find(({ids}) => guildIds.some(guildId => guildId in ids));
+        return (holdsId ?? targetsGuild)?.file;
     }
 
     /**
@@ -355,7 +372,12 @@ export abstract class BaseInteractionManager {
                     IDList.push(commandId);
                     console.log(`${cmd.name} deleted ${guildId ? `in guild ${guild?.name ?? guildId}` : "globally"}`);
                 } catch (error) {
-                    Log.error(`${cmd.name}${guildId ? ` (guild ${guildId})` : ""}: ${(error as Error).message}`);
+                    if (BaseInteractionManager.isGone(error)) {
+                        IDList.push(commandId);
+                        Log.warn(`${cmd.name}${guildId ? ` (guild ${guildId})` : ""}: already deleted on Discord, its ID is removed from the local file`);
+                    } else {
+                        Log.error(`${cmd.name}${guildId ? ` (guild ${guildId})` : ""}: ${(error as Error).message}`);
+                    }
                 }
             }
         }
@@ -366,6 +388,7 @@ export abstract class BaseInteractionManager {
 
     async update(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         console.log(`Updating ${commands.length} ${this.folderPath}(s)...`);
+        const goneIds: string[] = [];
 
         for (const cmd of commands) {
             if (!cmd.id) {
@@ -373,16 +396,9 @@ export abstract class BaseInteractionManager {
                 continue;
             }
 
-            // Read the file itself, to keep the IDs of the guilds that are not updated
-            let fileCmd: Interaction | null = null;
-            if (cmd.filename) {
-                const filePath = PathUtils.createPathFile(this.folderPath, cmd.filename);
-                fileCmd = await this.readInteraction(filePath);
-            }
-
             try {
-                const body = InteractionPayload.toDiscordPatch(cmd);
-                this.syncPermissions(cmd, body);
+                const body = InteractionPayload.toDiscordPatch(cmd, this.integrationTypes);
+                this.warnClearedBitfield(cmd, body);
 
                 // Case 1: Specific Guild
                 if (guild) {
@@ -394,18 +410,14 @@ export abstract class BaseInteractionManager {
                         continue;
                     }
 
-                    await this.rest.patch(Routes.applicationGuildCommand(this.clientId, guild.id, commandId), {
-                        body
-                    });
+                    if (!await this.patch(Routes.applicationGuildCommand(this.clientId, guild.id, commandId), body, cmd.name, commandId, goneIds)) continue;
                     console.log(`${cmd.name} updated in guild ${guild.name} ${guild.id}`);
                 }
                 // Case 2: Global / All Specific guilds
                 else {
                     // 2a: Global command
                     if (cmd.command_scope === "global") {
-                        await this.rest.patch(Routes.applicationCommand(this.clientId, cmd.id), {
-                            body
-                        });
+                        if (!await this.patch(Routes.applicationCommand(this.clientId, cmd.id), body, cmd.name, cmd.id, goneIds)) continue;
                         console.log(`${cmd.name} updated globally`);
                     }
                     // 2b: Guild-specific command
@@ -417,9 +429,12 @@ export abstract class BaseInteractionManager {
                         ));
 
                         results.forEach((result, index) => {
-                            const guildId = deployed[index]![0];
+                            const [guildId, commandId] = deployed[index]!;
                             if (result.status === "fulfilled") {
                                 console.log(`${cmd.name} updated in guild ${guildId}`);
+                            } else if (BaseInteractionManager.isGone(result.reason)) {
+                                goneIds.push(commandId);
+                                Log.warn(`${cmd.name}: Guild ${guildId}: already deleted on Discord, its ID is removed from the local file`);
                             } else {
                                 Log.error(`${cmd.name}: Guild ${guildId}: ${(result.reason as Error).message}`);
                             }
@@ -427,6 +442,7 @@ export abstract class BaseInteractionManager {
                     }
                 }
 
+                const fileCmd = cmd.filename ? await this.readInteraction(PathUtils.createPathFile(this.folderPath, cmd.filename)) : null;
                 if (!cmd.filename || !fileCmd) {
                     Log.error(`${cmd.name}: Local file not found, the file was not updated`);
                     continue;
@@ -435,16 +451,38 @@ export abstract class BaseInteractionManager {
                     Log.error(`${cmd.name}: The scope differs from the local file, the file was not updated`);
                     continue;
                 }
-
-                const finalCmd: Interaction = cmd.command_scope === "global"
-                    ? {...fileCmd, ...cmd, command_scope: 'global', id: cmd.id}
-                    : {...fileCmd, ...cmd, command_scope: 'guild', id: {...(fileCmd.id as SpecificCommandId), ...cmd.id}};
-
-                await this.saveInteraction(cmd.filename, finalCmd);
+                await this.saveFile(cmd.filename, fileCmd);
 
             } catch (error) {
                 Log.error(`${cmd.name}: ${(error as Error).message}`);
             }
+        }
+        if (goneIds.length > 0) {
+            await this.removeLocalIdFromFile(goneIds);
+        }
+    }
+
+    /**
+     * Discord answers 404 when the interaction, or its guild, no longer exists
+     * (deleted from the Developer Portal, by another tool or by the bot itself).
+     * Its local ID can then be removed, or the file would stay deployed forever.
+     */
+    private static isGone(error: unknown): boolean {
+        return error instanceof DiscordAPIError && error.status === 404;
+    }
+
+    /**
+     * @returns false when the interaction no longer exists on Discord: its ID is added to goneIds
+     */
+    private async patch(route: `/${string}`, body: Record<string, unknown>, name: string, commandId: string, goneIds: string[]): Promise<boolean> {
+        try {
+            await this.rest.patch(route, {body});
+            return true;
+        } catch (error) {
+            if (!BaseInteractionManager.isGone(error)) throw error;
+            goneIds.push(commandId);
+            Log.warn(`${name}: already deleted on Discord, its ID is removed from the local file`);
+            return false;
         }
     }
 
@@ -453,29 +491,12 @@ export abstract class BaseInteractionManager {
             ? Object.keys(cmd.id).filter(guildId => cmd.id![guildId] == null)
             : [];
         const dataToSend = InteractionPayload.toDiscord(cmd);
-        this.syncPermissions(cmd, dataToSend);
+        this.warnClearedBitfield(cmd, dataToSend);
 
         // Guild deployment
         if (cmd.command_scope == "guild") {
             let nb = 0;
-            let newIds: SpecificCommandId = {};
-
-
-            const filePath = PathUtils.createPathFile(this.folderPath, file);
-            const fileCmd = await this.readInteraction(filePath);
-            if (!fileCmd) {
-                console.error("Error when reading the file");
-                return false;
-            }
-
-            if(fileCmd.command_scope !== cmd.command_scope){
-                console.error("For some reason, the scope of the command differ from the on read in the file...")
-                return false
-            }
-
-            if (fileCmd.id && fileCmd.command_scope == "guild") {
-                newIds = { ...fileCmd.id };
-            }
+            const newIds: SpecificCommandId = {};
 
             for (const guildId of deployToGuilds) {
                 try {
@@ -490,22 +511,27 @@ export abstract class BaseInteractionManager {
                 }
             }
 
-            const finalCmd: Interaction = {
-                ...fileCmd,           // Base
-                ...cmd,               // New Data
-                command_scope: "guild",
-                id: Object.keys(newIds).length > 0 ? newIds : {}
-            };
+            const fileCmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
+            if (fileCmd?.command_scope !== "guild") {
+                Log.error(`${cmd.name}: ${file} is missing or no longer a guild ${this.folderPath}: the new IDs were not saved ${JSON.stringify(newIds)}`);
+                return false;
+            }
 
-            await this.saveInteraction(file, finalCmd);
+            fileCmd.id = {...fileCmd.id, ...newIds};
+            await this.saveFile(file, fileCmd);
             return nb === 0;
         }
         else if(cmd.command_scope == "global") {
             // Global deployment
             try {
                 const resp = await this.rest.post(Routes.applicationCommands(this.clientId), { body: dataToSend }) as RESTPostAPIApplicationCommandsResult;
-                cmd.id = resp.id;
-                await this.saveInteraction(file, cmd);
+                const fileCmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
+                if (fileCmd?.command_scope !== "global") {
+                    Log.error(`${cmd.name}: deployed with the ID ${resp.id}, but ${file} is missing or no longer global: the ID was not saved`);
+                    return false;
+                }
+                fileCmd.id = resp.id;
+                await this.saveFile(file, fileCmd);
                 return true
             } catch (error) {
                 console.error(`⚠️  Global: ${(error as Error).message}`);
@@ -514,11 +540,22 @@ export abstract class BaseInteractionManager {
         return false
     }
 
-    // Keep the saved bitfield in line with the permission names that were sent
-    private syncPermissions(cmd: Interaction, payload: Record<string, unknown>): void {
-        if (Array.isArray(cmd.default_member_permissions_string)) {
-            cmd.default_member_permissions = payload.default_member_permissions as string | null;
+    private warnClearedBitfield(cmd: Interaction, payload: Record<string, unknown>): void {
+        const bitfield = cmd.default_member_permissions;
+        if (Array.isArray(cmd.default_member_permissions_string) && payload.default_member_permissions === null && bitfield !== undefined && bitfield !== null) {
+            Log.warn(`${cmd.name}: "default_member_permissions_string" is empty, so everyone can use it and "default_member_permissions" (${bitfield}) is cleared. Remove the empty list to use this bitfield`);
         }
+    }
+
+    /**
+     * Saves a file read again after the request, so the edits made to it since the listing are kept.
+     * Only the bitfield changes, to follow the permission names.
+     */
+    private async saveFile(file: string, fileCmd: Interaction): Promise<void> {
+        if (Array.isArray(fileCmd.default_member_permissions_string)) {
+            fileCmd.default_member_permissions = InteractionPayload.resolvePermissions(fileCmd);
+        }
+        await this.saveInteraction(file, fileCmd);
     }
 
     /**

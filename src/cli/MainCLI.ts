@@ -4,6 +4,7 @@ import {InteractionCLI} from "./InteractionCLI/InteractionCLI";
 import {GenerationCLI} from "./GenerationCLI/GenerationCLI";
 import {Env} from "../Env";
 import {BaseInteractionManager} from "./interactions/BaseInteractionManager";
+import {InteractionPayload} from "./interactions/InteractionPayload";
 
 /**
  * --- MainCLI ---
@@ -20,6 +21,7 @@ export class MainCLI extends BaseCLI {
             const application = await BaseInteractionManager.fetchApplication(Env.token);
             BaseCLI.botName = application.name;
             BaseCLI.applicationId = application.id;
+            BaseCLI.integrationTypes = InteractionPayload.defaultIntegrationTypes(application);
         } catch (error) {
             throw new Error(`Cannot connect to Discord, check DISCORD_BOT_TOKEN and your connection (${(error as Error).message})`);
         }

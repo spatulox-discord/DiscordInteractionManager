@@ -1,3 +1,4 @@
+import {DiscordAPIError} from "@discordjs/rest";
 import {RESTAPIPartialCurrentUserGuild} from "discord-api-types/v10";
 import {afterEach, beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
@@ -27,6 +28,9 @@ function createManager(handler: RestHandler = () => ({})) {
 }
 
 const guild = (id: string) => ({id, name: `Guild ${id}`}) as RESTAPIPartialCurrentUserGuild;
+
+// What Discord answers for an interaction deleted outside of the CLI
+const unknownCommand = () => new DiscordAPIError({code: 10063, message: "Unknown application command"}, 10063, 404, "PATCH", "/", {});
 
 let folder: string;
 
@@ -75,6 +79,18 @@ describe("BaseInteractionManager.delete", () => {
         assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
     });
 
+    it("removes the local ID of an interaction already deleted on Discord", async () => {
+        await writeCommand("ping.json", local);
+        const {manager} = createManager(() => { throw unknownCommand(); });
+        mock.method(console, "log", () => {});
+        const warn = mock.method(console, "warn", () => {});
+
+        await manager.delete([remote], guild(G1));
+
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+        assert.match(String(warn.mock.calls[0]!.arguments[0]), /already deleted on Discord/);
+    });
+
     it("only clears the ID of the guild it was deleted from", async () => {
         await writeCommand("ping.json", local);
         const {manager, calls} = createManager();
@@ -103,6 +119,21 @@ describe("BaseInteractionManager.deploy", () => {
         const saved = await readCommand("ping.json");
         assert.equal(saved.id, C1);
         assert.equal("filename" in saved, false);
+    });
+
+    it("keeps the edits made to the file since the listing", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "Here", command_scope: "guild", id: {[G1]: null}});
+        const {manager} = createManager(() => ({id: C1}));
+        const global = await manager.listFromFile(Listing.LOCAL);
+        const inGuild = await manager.listFromFile(Listing.LOCAL, G1);
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Edited", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "Edited", command_scope: "guild", id: {[G1]: null, [G2]: null}});
+
+        await manager.deploy([...global, ...inGuild]);
+
+        assert.deepEqual(await readCommand("ping.json"), {name: "ping", type: 1, description: "Edited", command_scope: "global", id: C1});
+        assert.deepEqual(await readCommand("here.json"), {name: "here", type: 1, description: "Edited", command_scope: "guild", id: {[G1]: C1, [G2]: null}});
     });
 
     it("only deploys to the requested guild and keeps the other ones", async () => {
@@ -165,6 +196,16 @@ describe("BaseInteractionManager.deploy", () => {
         assert.equal((calls[0]!.body as any).default_member_permissions, "4");
         assert.equal((await readCommand("ban.json")).default_member_permissions, "4");
     });
+
+    it("warns when an empty permission list clears the bitfield", async () => {
+        await writeCommand("ban.json", {name: "ban", type: 1, description: "Ban", command_scope: "global", default_member_permissions: "4", default_member_permissions_string: []});
+        const {manager} = createManager(() => ({id: C1}));
+        const warn = mock.method(console, "warn", () => {});
+
+        await manager.deploy(await manager.listFromFile(Listing.LOCAL));
+
+        assert.match(String(warn.mock.calls[0]!.arguments[0]), /ban: "default_member_permissions_string" is empty, so everyone can use it/);
+    });
 });
 
 describe("BaseInteractionManager.delete in every guild", () => {
@@ -207,6 +248,30 @@ describe("BaseInteractionManager.listPerGuild", () => {
             ["ping", {[G1]: C1, [G2]: C2}, "ping_file.json"],
             ["other", {[G2]: C3}, undefined],
         ]);
+    });
+});
+
+describe("BaseInteractionManager.listPerGuild local files", () => {
+    it("finds the file of each guild when several files share the name", async () => {
+        await writeCommand("ping_g1.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G1]: C1}});
+        await writeCommand("ping_g2.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G2]: null}});
+        await writeCommand("ping_g3.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G3]: null}});
+        const remote: Record<string, unknown[]> = {
+            [G1]: [{id: C1, type: 1, name: "ping", description: "d", guild_id: G1}],
+            [G2]: [{id: C2, type: 1, name: "ping", description: "d", guild_id: G2}],
+        };
+        const {manager} = createManager(({route}) => remote[route.split("/")[4]!] ?? []);
+
+        assert.equal((await manager.listPerGuild([guild(G1)]))[0]!.filename, "ping_g1.json");
+        assert.equal((await manager.listPerGuild([guild(G2)]))[0]!.filename, "ping_g2.json");
+        assert.equal((await manager.listPerGuild([guild(G2), guild(G1)]))[0]!.filename, "ping_g1.json");
+    });
+
+    it("does not link a file targeting other guilds", async () => {
+        await writeCommand("ping_g3.json", {name: "ping", type: 1, description: "d", command_scope: "guild", id: {[G3]: null}});
+        const {manager} = createManager(() => [{id: C1, type: 1, name: "ping", description: "d", guild_id: G1}]);
+
+        assert.equal((await manager.listPerGuild([guild(G1)]))[0]!.filename, undefined);
     });
 });
 
@@ -260,7 +325,21 @@ describe("BaseInteractionManager.update", () => {
         ], null);
 
         assert.deepEqual(calls.map(c => c.method), ["patch", "patch"]);
-        assert.equal((await readCommand("pong.json")).description, "New pong");
+        assert.equal((calls[1]!.body as any).description, "New pong");
+    });
+
+    it("keeps the edits made to the file since the listing", async () => {
+        const ban = {name: "ban", type: 1, description: "Ban", command_scope: "guild", id: {[G1]: C1}, default_member_permissions_string: ["BanMembers"]};
+        await writeCommand("ban.json", ban);
+        const {manager} = createManager();
+        const listed = await manager.listFromFile(Listing.DEPLOYED, G1);
+        await writeCommand("ban.json", {...ban, description: "Edited", default_member_permissions_string: ["KickMembers"]});
+
+        await manager.update(listed, guild(G1));
+
+        const saved = await readCommand("ban.json");
+        assert.equal(saved.description, "Edited");
+        assert.equal(saved.default_member_permissions, "2");
     });
 
     it("removes on Discord the options removed from the local file", async () => {
@@ -272,6 +351,36 @@ describe("BaseInteractionManager.update", () => {
 
         assert.deepEqual((calls[0]!.body as any).options, []);
         assert.equal((calls[0]!.body as any).default_member_permissions, null);
+    });
+
+    it("removes the ID of a global command already deleted on Discord", async () => {
+        const ping = {name: "ping", type: 1, description: "Ping", command_scope: "global", id: C1};
+        await writeCommand("ping.json", ping);
+        const {manager} = createManager(() => { throw unknownCommand(); });
+        mock.method(console, "log", () => {});
+        mock.method(console, "warn", () => {});
+
+        await manager.update([{...ping, filename: "ping.json"} as any], null);
+
+        assert.equal("id" in await readCommand("ping.json"), false);
+    });
+
+    it("removes the ID of the guilds where the command was already deleted", async () => {
+        const local = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {[G1]: C1, [G2]: C2}};
+        await writeCommand("ping.json", local);
+        const {manager} = createManager(({route}) => {
+            if (route.includes(`/guilds/${G1}/`)) throw unknownCommand();
+            return {};
+        });
+        mock.method(console, "log", () => {});
+        mock.method(console, "warn", () => {});
+
+        await manager.update([{...local, filename: "ping.json"} as any], null);
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+
+        await writeCommand("ping.json", local);
+        await manager.update([{...local, id: {[G1]: C1}, filename: "ping.json"} as any], guild(G1));
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
     });
 
     it("updates every guild even when one of them fails", async () => {

@@ -89,8 +89,21 @@ describe("InteractionPayload.toDiscordPatch", () => {
         assert.deepEqual(InteractionPayload.toDiscordPatch(cmd), {
             name: "ping", type: 1, description: "Ping",
             name_localizations: null, description_localizations: null, options: [],
-            nsfw: false, contexts: null, default_member_permissions: null,
+            nsfw: false, contexts: null, integration_types: [0], default_member_permissions: null,
         });
+    });
+
+    it("resets the integration types to the ones of the application", () => {
+        const cmd = {name: "ping", type: 1, description: "Ping", command_scope: "global"} as unknown as Interaction;
+        assert.deepEqual(InteractionPayload.toDiscordPatch(cmd, [0, 1]).integration_types, [0, 1]);
+
+        const local = {...cmd, integration_types: [1]} as unknown as Interaction;
+        assert.deepEqual(InteractionPayload.toDiscordPatch(local, [0, 1]).integration_types, [1]);
+    });
+
+    it("never sends integration types for guild interactions", () => {
+        const cmd = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {}} as unknown as Interaction;
+        assert.equal("integration_types" in InteractionPayload.toDiscordPatch(cmd, [0, 1]), false);
     });
 
     it("keeps the local values", () => {
@@ -108,6 +121,17 @@ describe("InteractionPayload.toDiscordPatch", () => {
     });
 });
 
+describe("InteractionPayload.defaultIntegrationTypes", () => {
+    it("reads the installation types of the application", () => {
+        const application = {integration_types_config: {"0": {}, "1": {}}} as any;
+        assert.deepEqual(InteractionPayload.defaultIntegrationTypes(application), [0, 1]);
+    });
+
+    it("falls back to the guild installation", () => {
+        assert.deepEqual(InteractionPayload.defaultIntegrationTypes({} as any), [0]);
+    });
+});
+
 describe("InteractionPayload.fromDiscord", () => {
     const base = {id: "c1", application_id: "app", version: "v1", dm_permission: true, default_member_permissions: null};
 
@@ -117,9 +141,20 @@ describe("InteractionPayload.fromDiscord", () => {
 
         assert.deepEqual(InteractionPayload.fromDiscord(raw), {
             type: 1, name: "search", description: "Search", options, nsfw: true, contexts: [0],
-            dm_permission: true, default_member_permissions: null, default_member_permissions_string: [],
+            dm_permission: true, default_member_permissions: null,
             command_scope: "global", id: "c1",
         });
+    });
+
+    it("keeps the permission names", () => {
+        const raw = {...base, type: 1, name: "ban", description: "d", default_member_permissions: PermissionFlagsBits.BanMembers.toString()} as any;
+        assert.deepEqual(InteractionPayload.fromDiscord(raw).default_member_permissions_string, ["BanMembers"]);
+    });
+
+    it("lets the bitfield of a command usable by everyone be edited", () => {
+        const cmd = InteractionPayload.fromDiscord({...base, type: 1, name: "ping", description: "d"} as any);
+        cmd.default_member_permissions = "8";
+        assert.equal(InteractionPayload.toDiscord(cmd).default_member_permissions, "8");
     });
 
     it("keeps a permission unknown to discord-api-types after a round trip", () => {

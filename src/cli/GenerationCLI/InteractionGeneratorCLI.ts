@@ -21,7 +21,9 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
 
         let filename: string;
         while (true) {
-            filename = (await this.input.requireInput("Filename : ", FileManager.isSafeFilename)).trim().replace(/\.json$/i, '');
+            // Checked without the extension, since ".json" alone would leave an empty name
+            const withoutExtension = (val: string) => val.trim().replace(/\.json$/i, '');
+            filename = withoutExtension(await this.input.requireInput("Filename : ", val => FileManager.isSafeFilename(withoutExtension(val))));
             if (FileManager.isExampleFile(filename)) {
                 console.log('Files whose name starts with "example" are ignored, choose another name');
                 continue;

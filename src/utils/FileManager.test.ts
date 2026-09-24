@@ -56,10 +56,16 @@ describe("FileManager.fileExists", () => {
 
 describe("FileManager.isSafeFilename", () => {
     it("rejects names that leave the target folder", () => {
-        for (const name of ["ping", "ping.json", "my command", "ping..json"]) {
+        for (const name of ["ping", "ping.json", "my command", "ping..json", "console", "auxiliary"]) {
             assert.equal(FileManager.isSafeFilename(name), true, name);
         }
         for (const name of ["", " ", ".", "..", "../ping", "a/b", "a\\b", "/etc/passwd"]) {
+            assert.equal(FileManager.isSafeFilename(name), false, name);
+        }
+    });
+
+    it("rejects names Windows cannot write", () => {
+        for (const name of ["a:b", "what?", "a*", 'say "hi"', "<b>", "a|b", "a\tb", "CON", "aux.json", "com1", "LPT9.txt"]) {
             assert.equal(FileManager.isSafeFilename(name), false, name);
         }
     });
@@ -82,5 +88,7 @@ describe("FileManager.toSafeFilename", () => {
         assert.equal(FileManager.toSafeFilename("Copy / Paste"), "Copy _ Paste");
         assert.equal(FileManager.toSafeFilename('a:b*c?"d<e>f|g\\h'), "a_b_c__d_e_f_g_h");
         assert.equal(FileManager.toSafeFilename(".."), "_");
+        assert.equal(FileManager.toSafeFilename("aux"), "_aux");
+        assert.equal(FileManager.toSafeFilename("NUL.old"), "_NUL.old");
     });
 });
