@@ -122,6 +122,16 @@ describe("InteractionPayload.fromDiscord", () => {
         });
     });
 
+    it("keeps a permission unknown to discord-api-types after a round trip", () => {
+        const unknownBit = (1n << 62n).toString();
+        const raw = {...base, type: 1, name: "mod", description: "d", default_member_permissions: unknownBit} as any;
+
+        const cmd = InteractionPayload.fromDiscord(raw);
+
+        assert.equal("default_member_permissions_string" in cmd, false);
+        assert.equal(InteractionPayload.toDiscord(cmd).default_member_permissions, unknownBit);
+    });
+
     it("stores guild commands with their guild ID", () => {
         const raw = {...base, type: 3, name: "Report", description: "", guild_id: "111"} as any;
         const cmd = InteractionPayload.fromDiscord(raw);

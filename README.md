@@ -1,6 +1,8 @@
 # Discord Interaction Manager
+[![CI](https://github.com/spatulox-discord/DiscordInteractionManager/actions/workflows/ci.yml/badge.svg)](https://github.com/spatulox-discord/DiscordInteractionManager/actions/workflows/ci.yml)
+
 Are you always fed up with creating interactions by hand or developing your own tools to deploy, update, or delete a slash command or a context menu ?
-Same thing when listing interactions — because it’s a mess with specific guild interactions and global interaction ? You never know which one is where or which permission it have ? This tool is made for you !
+Same thing when listing interactions, because it’s a mess with specific guild interactions and global interaction ? You never know which one is where or which permission it have ? This tool is made for you !
 Discord Interaction Manager is a lightweight CLI tool to manage Discord bot interactions (slash commands, context menus) in under 10 seconds. Generate, deploy, list, update, delete, your interactions with an interactive terminal interface.
 
 ✨ Features
@@ -13,9 +15,9 @@ Discord Interaction Manager is a lightweight CLI tool to manage Discord bot inte
 
     🎛️ Interactive CLI: Rich menus, input validation, interaction selection
 
-    📦 Only one runtime deps: Only discord.js is required in production
-    
-    🛡️ Never deprecated: Uses discord.js for all Discord requests and enum, always up-to-date with Discord API
+    📦 Light: only @discordjs/rest, discord-api-types and dotenv at runtime, no discord.js needed
+
+    🛡️ Up to date: Discord routes, enums and permissions come from discord-api-types
 
 
 > This documentation assume that you know how interactions are built on Discord, if not, please see :
@@ -31,6 +33,7 @@ Discord Interaction Manager is a lightweight CLI tool to manage Discord bot inte
     -  Discord "Activities" are not supported, because it's a complete game feature.
 
 ## Quick Start
+Requires Node.js 18.17 or newer.
 ```bash
 npm install @spatulox/discord-interaction-manager
 ```
@@ -69,8 +72,10 @@ You will be greet by a CLI :
 3. Help
 4. Exit
 ════════════════════════════════════════
-Choose an option: 
+Choose an option (or "exit" to quit):
 ```
+
+Type the number of an option, or `exit` in any menu to quit.
 
 # How it works
 ## Creating an interaction
@@ -140,12 +145,14 @@ Options:
       
 >   - **Normal update will not work**
 
-> - If you want to update the permission of the interaction, you need to update the "**default_member_permissions_string**" field with the keyof **PermissionBitFields** of discordjs (or let it empty for everyone), it will automatically update the "**default_member_permissions**" field required by Discord
+> - If you want to update the permission of the interaction, you need to update the "**default_member_permissions_string**" field with the names of **PermissionFlagsBits** (discord-api-types, the same as discord.js) (or let it empty for everyone), it will automatically update the "**default_member_permissions**" field required by Discord. An unknown name (names are case sensitive) makes the file invalid, and it is reported instead of being deployed
 
 > - If the "**default_member_permissions_string**" field doesn't exist for some reason, you can create it or go to the [Discord Dev potal](https://discord.com/developers/applications/), in any of your app, go to the "Bot" tab and then check any of the "BotPermission" you want for the interaction and then copy the "Permission Integer" to paste it inside the "**default_member_permissions**" field inside the json of the interaction 
 
 ## Delete an interation
 > - You can delete any interaction, in any scope**
+
+> - The CLI names the selected interactions and asks for a confirmation (`Delete ping, ban globally? (y/n)`) before deleting anything
 
 Key:
 * *Folder at the root of your project, if not, make sure you didn't overwrite the path with the DISCORD_INTERACTION_FOLDER variable

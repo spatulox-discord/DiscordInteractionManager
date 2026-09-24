@@ -22,11 +22,15 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         let filename: string;
         while (true) {
             filename = (await this.input.requireInput("Filename : ", FileManager.isSafeFilename)).trim().replace(/\.json$/i, '');
+            if (FileManager.isExampleFile(filename)) {
+                console.log('Files whose name starts with "example" are ignored, choose another name');
+                continue;
+            }
             if (!await FileManager.fileExists(PathUtils.createPathFile(folderName, `${filename}.json`))) break;
-            if (await this.input.yesNoInput(`"${filename}" already exists. Overwrite? (y/n): `)) break;
+            if (await this.input.yesNoInput(`"${filename}" already exists. Overwrite?`)) break;
         }
 
-        if (!await this.input.yesNoInput("\nSave this file? (y/n): ")) {
+        if (!await this.input.yesNoInput("\nSave this file?")) {
             console.log("Cancelled");
             return;
         }
@@ -38,8 +42,19 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         }
     }
 
+    /**
+     * Asks for a text of 1 to max characters, without its surrounding spaces (Discord would trim them or reject a blank text).
+     */
+    protected async requireText(message: string, max: number, isValid: (text: string) => boolean = () => true): Promise<string> {
+        const text = await this.input.requireInput(message, val => {
+            const trimmed = val.trim();
+            return trimmed.length >= 1 && trimmed.length <= max && isValid(trimmed);
+        });
+        return text.trim();
+    }
+
     protected async nsfw(config: SlashCommandConfigGenerator | ContextMenuConfigGenerator): Promise<void> {
-        if(await this.input.yesNoInput("NSFW ? (y/n)")){
+        if(await this.input.yesNoInput("NSFW?")){
             config.nsfw = true
         }
     }

@@ -1,5 +1,8 @@
-import {beforeEach, describe, it, mock} from "node:test";
+import {afterEach, beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
 import {GuildSelector} from "../GuildSelector";
 import {CommandOption, DiscordOptionType, InteractionContextType} from "../type/InteractionType";
@@ -43,6 +46,31 @@ describe("SlashCommandGeneratorCLI choices", () => {
         assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.NUMBER, " "), false);
     });
 
+    it("keeps choice values within the limits of the option", () => {
+        const {INTEGER, NUMBER, STRING} = DiscordOptionType;
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(INTEGER, "5", {min_value: 1, max_value: 10}), true);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(INTEGER, "0", {min_value: 1}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(NUMBER, "10.5", {max_value: 10}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "ab", {min_length: 3}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "abcd", {max_length: 3}), false);
+        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "abc", {min_length: 3, max_length: 3}), true);
+    });
+
+    it("asks again for a choice name or value already used", async () => {
+        const answers = ["y", "One", "1", "y", "One", "Two", "1", "01", "2", "n"];
+        assert.deepEqual(await scripted(answers).addChoices(DiscordOptionType.INTEGER), [
+            {name: "One", value: 1},
+            {name: "Two", value: 2},
+        ]);
+        assert.deepEqual(answers, []);
+    });
+
+    it("asks again for a choice outside the limits of the option", async () => {
+        const answers = ["y", "Big", "11", "10", "n"];
+        assert.deepEqual(await scripted(answers).addChoices(DiscordOptionType.INTEGER, {max_value: 10}), [{name: "Big", value: 10}]);
+        assert.deepEqual(answers, []);
+    });
+
     it("stores integer choices as numbers", async () => {
         const generator = scripted(["y", "One", "abc", "1", "y", "Two", "2", "n"]);
         assert.deepEqual(await generator.addChoices(DiscordOptionType.INTEGER), [
@@ -54,6 +82,18 @@ describe("SlashCommandGeneratorCLI choices", () => {
     it("stores string choices as strings", async () => {
         const generator = scripted(["y", "One", "1", "n"]);
         assert.deepEqual(await generator.addChoices(DiscordOptionType.STRING), [{name: "One", value: "1"}]);
+    });
+});
+
+describe("InteractionGeneratorCLI.requireText", () => {
+    it("asks again for a blank or too long text and trims it", async () => {
+        const answers = ["   ", "a".repeat(101), "  Search the wiki  "];
+        assert.equal(await scripted(answers).requireText("Description: ", 100), "Search the wiki");
+        assert.deepEqual(answers, []);
+    });
+
+    it("counts the length without the surrounding spaces", async () => {
+        assert.equal(await scripted([` ${"a".repeat(100)} `]).requireText("Description: ", 100), "a".repeat(100));
     });
 });
 
@@ -178,6 +218,29 @@ describe("InteractionGeneratorCLI.selectEnumValues", () => {
         const answers = ["3", "2,0"];
         assert.deepEqual(await select(answers), [2, 0]);
         assert.deepEqual(answers, []);
+    });
+});
+
+describe("InteractionGeneratorCLI.save", () => {
+    let folder: string;
+
+    beforeEach(async () => {
+        folder = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
+        process.env.DISCORD_INTERACTION_FOLDER = folder;
+        delete process.env.DISCORD_BOT_DEV;
+        mock.method(console, "info", () => {});
+    });
+
+    afterEach(async () => {
+        await fs.rm(folder, {recursive: true, force: true});
+    });
+
+    it("asks another name for a file that would be ignored", async () => {
+        const answers = ["Example_ping", "ping", "y"];
+        await scripted(answers).save("commands", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+
+        assert.deepEqual(answers, []);
+        assert.deepEqual(await fs.readdir(path.join(folder, "commands")), ["ping.json"]);
     });
 });
 

@@ -20,19 +20,26 @@ export class Utils {
         return [...namesByValue].map(([value, name]) => [name, value]);
     }
 
+    // Own keys only, so "constructor" or "toString" are not permissions
+    static isPermissionName(name: string): boolean {
+        return Object.prototype.hasOwnProperty.call(PermissionFlagsBits, name);
+    }
+
+    /**
+     * @throws on an unknown name, which would otherwise restrict the command to administrators without warning
+     */
     static permissionsToBitfield(perms: string[] | undefined): string | undefined {
-        if (!perms || perms.length === 0) return undefined;
-        if(!Array.isArray(perms)){
-            throw new Error("Invalid default_permission_string : not an array");
+        if (perms !== undefined && !Array.isArray(perms)) {
+            throw new Error("Invalid default_member_permissions_string: not an array");
         }
+        if (!perms || perms.length === 0) return undefined;
+
         let bits = 0n;
         for (const name of perms) {
-            const value = (PermissionFlagsBits as Record<string, bigint>)[name];
-            if (!value) {
-                console.warn(`Unknow permission in default_member_permissions: ${name}`);
-                continue;
+            if (!this.isPermissionName(name)) {
+                throw new Error(`Unknown permission in default_member_permissions_string: ${name}`);
             }
-            bits |= value;
+            bits |= (PermissionFlagsBits as Record<string, bigint>)[name]!;
         }
 
         return bits.toString();
@@ -51,5 +58,15 @@ export class Utils {
         }
 
         return result;
+    }
+
+    /**
+     * Bits without a permission name, e.g. a permission added by Discord after this version of discord-api-types.
+     * @returns 0n when every bit has a name
+     */
+    static unknownPermissionBits(bitfield: string | number | null | bigint | undefined): bigint {
+        if (!bitfield) return 0n;
+        const known = this.permissionEntries().reduce((bits, [, value]) => bits | value, 0n);
+        return BigInt(bitfield) & ~known;
     }
 }

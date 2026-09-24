@@ -15,9 +15,14 @@ import {NO_PAUSE} from "../BaseCLI";
 const manager = {folderPath: "commands"} as any;
 const guild = {id: "111", name: "Guild 111"} as any;
 
-function select(answer: string, commands: unknown[]) {
+function select(answers: string | string[], commands: unknown[]) {
+    const scripted = [answers].flat();
     const cli = new GlobalInteractionCLI(undefined as any, manager, "CommandManager") as any;
-    cli.input.ask = async () => answer;
+    cli.input.ask = async () => {
+        const answer = scripted.shift();
+        if (answer === undefined) throw new Error("No more scripted answers");
+        return answer;
+    };
     return cli.selectCommands(commands);
 }
 
@@ -37,10 +42,41 @@ describe("ScopeInteractionCLI.selectCommands", () => {
         assert.deepEqual(await select(" Exit", commands), []);
     });
 
-    it("rejects the whole selection when a number is invalid", async () => {
-        for (const answer of ["1,abc", "1,3", "1.5", ""]) {
-            assert.deepEqual(await select(answer, commands), [], answer);
-        }
+    it("cancels when left empty", async () => {
+        assert.deepEqual(await select(" ", commands), []);
+    });
+
+    it("asks again when a number is invalid", async () => {
+        assert.deepEqual(await select(["1,abc", "1,3", "1.5", "1"], commands), ["b"]);
+    });
+});
+
+describe("ScopeInteractionCLI.handleDelete", () => {
+    const ping = {name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"};
+
+    async function deleteGlobal(answers: string[]) {
+        const deleted: unknown[][] = [];
+        const fakeManager = {
+            folderPath: "commands",
+            list: async () => [ping],
+            delete: async (...args: unknown[]) => { deleted.push(args); },
+        };
+        const cli = new GlobalInteractionCLI(undefined as any, fakeManager as any, "CommandManager") as any;
+        const questions: string[] = [];
+        cli.input.ask = async (question: string) => { questions.push(question); return answers.shift(); };
+        await cli.handleDelete(null);
+        return {deleted, questions};
+    }
+
+    it("names what will be deleted before deleting it", async () => {
+        const {deleted, questions} = await deleteGlobal(["0", "y"]);
+        assert.equal(questions[1], "Delete ping globally? (y/n): ");
+        assert.deepEqual(deleted, [[[ping], null]]);
+    });
+
+    it("deletes nothing when the deletion is not confirmed", async () => {
+        const {deleted} = await deleteGlobal(["all", "n"]);
+        assert.deepEqual(deleted, []);
     });
 });
 
@@ -124,7 +160,7 @@ describe("InteractionManagerCLI", () => {
 describe("AllGuildsInteractionCLI", () => {
     const ping = {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1", "222": "c2"}};
 
-    function allGuilds(calls: unknown[][]) {
+    function allGuilds(calls: unknown[][], answers: string[] = ["0"]) {
         const fakeManager = {
             folderPath: "commands",
             listFromFile: async (...args: unknown[]) => { calls.push(["listFromFile", ...args]); return [ping]; },
@@ -133,7 +169,7 @@ describe("AllGuildsInteractionCLI", () => {
             delete: async (...args: unknown[]) => { calls.push(["delete", ...args]); },
         };
         const cli = new AllGuildsInteractionCLI(undefined as any, fakeManager as any, "CommandManager") as any;
-        cli.input.ask = async () => "0";
+        cli.input.ask = async () => answers.shift();
         return cli;
     }
 
@@ -151,7 +187,13 @@ describe("AllGuildsInteractionCLI", () => {
 
     it("deletes the commands listed from Discord from all their guilds", async () => {
         const calls: unknown[][] = [];
-        await allGuilds(calls).handleDeleteAll();
+        await allGuilds(calls, ["0", "y"]).handleDeleteAll();
         assert.deepEqual(calls, [["listPerGuild", [guild]], ["delete", [ping], null]]);
+    });
+
+    it("deletes nothing when the deletion is not confirmed", async () => {
+        const calls: unknown[][] = [];
+        await allGuilds(calls, ["all", "n"]).handleDeleteAll();
+        assert.deepEqual(calls, [["listPerGuild", [guild]]]);
     });
 });

@@ -1,6 +1,11 @@
 import {REST} from '@discordjs/rest';
-import {RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult, Routes} from 'discord-api-types/v10';
-import * as fs from 'fs/promises';
+import {
+    RESTAPIPartialCurrentUserGuild,
+    RESTGetCurrentApplicationResult,
+    RESTPostAPIApplicationCommandsResult,
+    RESTPostAPIApplicationGuildCommandsResult,
+    Routes
+} from 'discord-api-types/v10';
 import {Log} from "../../utils/Log";
 import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
@@ -34,7 +39,7 @@ export abstract class BaseInteractionManager {
     printInteraction(cmdList: Interaction[]): void {
         console.table(
             cmdList.map((cmd: Interaction) => ({
-                Nom: cmd.name,
+                Name: cmd.name,
                 Type: InteractionDetails.typeLabel(cmd.type),
                 Description: 'description' in cmd ? cmd.description : 'N/A',
                 Permissions: InteractionDetails.permissionsLabel(cmd),
@@ -66,21 +71,19 @@ export abstract class BaseInteractionManager {
         console.log(`Listing Local Handlers (${this.folderPath}) ${scopeMessage}`);
 
         try {
-            const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath));
-            if (!files || files.length === 0) {
+            const files = await this.listLocalFiles();
+            if (files.length === 0) {
                 console.log('No files found');
                 return [];
             }
 
             const commandList: Interaction[] = [];
 
-            for (const [_index, file] of files.entries()) {
-                if (/^example/i.test(file)) continue;
-
+            for (const file of files) {
                 const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
                 if (!cmd) continue;
                 if (!guildID && (cmd.command_scope === "guild") !== allGuilds) continue;
-                // === LISTING.DEPLOYED === Liste ceux QUI ONT un ID défini
+                // === LISTING.DEPLOYED === Only the ones with an ID
                 if (list === Listing.DEPLOYED) {
                     if (!cmd.id) {
                         continue
@@ -103,7 +106,7 @@ export abstract class BaseInteractionManager {
 
                 }
 
-                // === LISTING.LOCAL === Liste ceux SANS ID (ou vide pour guildID)
+                // === LISTING.LOCAL === Only the ones without an ID (in the requested guild if any)
                 if (list === Listing.LOCAL) {
                     if (!cmd.id) {
                         // No ID → OK
@@ -117,12 +120,11 @@ export abstract class BaseInteractionManager {
                         // Only deploy to the requested guild, the other ones stay pending in the file
                         cmd.id = {[guildID]: null};
                     } else if (cmd.id && cmd.command_scope === "guild") {
-                        //console.log(cmd)
-                        // *** FILTRER guild_ids and keep non-deployed ***
+                        // Skip it when deployed everywhere
                         const allDeployed = Object.values(cmd.id || {}).every(id => id != null);
                         if (allDeployed) continue;
 
-                        // Filtre les non-déployés
+                        // Only deploy to the guilds it is not deployed in yet
                         cmd.id = Object.fromEntries(
                             Object.entries(cmd.id || {}).filter(([_gId, id]) => id == null)
                         );
@@ -145,12 +147,37 @@ export abstract class BaseInteractionManager {
             }
 
             console.log(`${commandList.length} local ${this.folderPath}(s) found\n`);
+            this.warnDuplicates(commandList);
             this.printInteraction(commandList);
             return commandList;
         } catch (error) {
             Log.error(`${(error as Error).message}`);
             return [];
         }
+    }
+
+    /**
+     * Discord keeps one interaction per type and name in a scope: deploying a second file overwrites the first one,
+     * and both files end up with the same ID.
+     */
+    private warnDuplicates(commands: Interaction[]): void {
+        commands.forEach((cmd, index) => {
+            for (const other of commands.slice(index + 1)) {
+                if (cmd.type !== other.type || cmd.name !== other.name) continue;
+
+                let where: string;
+                if (cmd.command_scope === "global" && other.command_scope === "global") {
+                    where = "globally";
+                } else if (cmd.command_scope === "guild" && other.command_scope === "guild") {
+                    const shared = Object.keys(cmd.id).filter(guildId => guildId in other.id);
+                    if (shared.length === 0) continue;
+                    where = `in guild ${shared.join(", ")}`;
+                } else {
+                    continue;
+                }
+                Log.warn(`${cmd.filename} and ${other.filename} both define the ${InteractionDetails.typeLabel(cmd.type)} "${cmd.name}" ${where}: Discord keeps only one of them`);
+            }
+        });
     }
 
     private async fetchCommands(
@@ -165,10 +192,10 @@ export abstract class BaseInteractionManager {
         if (printResult) console.log(`Listing Deployed Handlers ${this.folderPath} on Discord (${scopeLabel})`);
 
         try {
-            const rawCmds = await this.rest.get(endpoint) as any[];
-            const commands = rawCmds.filter(cmd => this.commandType.includes(cmd.type));
-
-            const commandList: Interaction[] = commands.map((cmd: OnlineInteractionConfig) => InteractionPayload.fromDiscord(cmd));
+            const rawCmds = await this.rest.get(endpoint) as OnlineInteractionConfig[];
+            const commandList: Interaction[] = rawCmds
+                .filter(cmd => this.commandType.includes(cmd.type))
+                .map(cmd => InteractionPayload.fromDiscord(cmd));
 
             if(printResult) {
                 console.log(`${commandList.length} ${this.folderPath}(s) found\n`);
@@ -203,39 +230,28 @@ export abstract class BaseInteractionManager {
         );
     }
 
-    async listAllGuilds(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<{ guild: string; globalCommands: Interaction[], guildCommands: Interaction[] }[]> {
-        console.log("📡 Getting all guilds...\n");
-        console.log(`📋 ${guilds.length} guild(s) found\n`);
+    /**
+     * Prints, for each guild, how many global and guild interactions are available in it.
+     */
+    async countPerGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<void> {
+        if (!guilds.length) {
+            console.log("No guild found");
+            return;
+        }
+        console.log(`📡 Counting the ${this.folderPath} of ${guilds.length} guild(s)...\n`);
 
-        if (!guilds.length) return [];
+        // list logs its own errors and returns an empty list
+        const globalCount = (await this.list(false)).length;
+        const guildCounts = (await this.fetchEachGuild(guilds)).map(commands => commands.length);
 
-        const globalCommands = await this.list(false)
-
-        // listGuild logs its own errors and returns an empty list
-        const guildCommandPromises = guilds.map(async (guild: RESTAPIPartialCurrentUserGuild) => {
-            const guildCommands = await this.listGuild(guild.id, false)
-            return {
-                guild: `${guild.name} (${guild.id})`,
-                guildId: guild.id,
-                globalCommands: globalCommands,
-                guildCommands: guildCommands,
-                count: guildCommands.length + globalCommands.length
-            };
-        });
-
-        const results = await Promise.all(guildCommandPromises);
-
-        const interactionTypeTitle = this.folderPath ? (this.folderPath?.toUpperCase() ) : "INTERACTION"
-        const interactionTypeDesc = this.folderPath ? (this.folderPath?.charAt(0).toUpperCase() + this.folderPath?.slice(1) ) : " Interactions"
-        console.log(`📊 ${interactionTypeTitle} PER GUILD :`);
-        console.table(results.map(r => ({
-            "Guild": r.guild,
-            ["Global " + interactionTypeDesc]: r.globalCommands.length,
-            ["Specific " + interactionTypeDesc]: r.guildCommands.length,
-            "Total": r.count
+        const label = this.folderPath.charAt(0).toUpperCase() + this.folderPath.slice(1);
+        console.log(`📊 ${this.folderPath.toUpperCase()} PER GUILD :`);
+        console.table(guilds.map((guild, index) => ({
+            "Guild": `${guild.name} (${guild.id})`,
+            [`Global ${label}`]: globalCount,
+            [`Specific ${label}`]: guildCounts[index],
+            "Total": globalCount + guildCounts[index]!,
         })));
-
-        return results.filter(r => r.count > 0);
     }
 
 
@@ -245,8 +261,7 @@ export abstract class BaseInteractionManager {
      * with their ID in each guild and the matching local file if any.
      */
     async listPerGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<Interaction[]> {
-        // listGuild logs its own errors and returns an empty list
-        const perGuild = await Promise.all(guilds.map(guild => this.listGuild(guild.id, false)));
+        const perGuild = await this.fetchEachGuild(guilds);
 
         const merged = new Map<string, Interaction & { command_scope: "guild" }>();
         for (const cmd of perGuild.flat()) {
@@ -268,11 +283,31 @@ export abstract class BaseInteractionManager {
         return commands;
     }
 
+    /**
+     * Fetches the guild interactions of each guild, in the order of the guilds.
+     * Shows how many guilds are done on a terminal, since it takes a while for a bot in many guilds.
+     * listGuild logs its own errors and returns an empty list.
+     */
+    private async fetchEachGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<Interaction[][]> {
+        const progress = process.stdout.isTTY
+            ? (done: number) => process.stdout.write(`\r📡 ${done}/${guilds.length} guild(s) fetched`)
+            : () => {};
+        let done = 0;
+        progress(done);
+
+        const perGuild = await Promise.all(guilds.map(async guild => {
+            const commands = await this.listGuild(guild.id, false);
+            progress(++done);
+            return commands;
+        }));
+
+        if (process.stdout.isTTY) process.stdout.write("\n\n");
+        return perGuild;
+    }
+
     private async readGuildFiles(): Promise<{ cmd: Interaction, file: string }[]> {
-        const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath)) || [];
         const result: { cmd: Interaction, file: string }[] = [];
-        for (const file of files) {
-            if (/^example/i.test(file)) continue;
+        for (const file of await this.listLocalFiles()) {
             const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
             if (cmd?.command_scope === "guild") result.push({cmd, file});
         }
@@ -338,7 +373,7 @@ export abstract class BaseInteractionManager {
                 continue;
             }
 
-            // Lecture du fichier original pour préserver les IDs existants
+            // Read the file itself, to keep the IDs of the guilds that are not updated
             let fileCmd: Interaction | null = null;
             if (cmd.filename) {
                 const filePath = PathUtils.createPathFile(this.folderPath, cmd.filename);
@@ -447,8 +482,8 @@ export abstract class BaseInteractionManager {
                     const resp = await this.rest.post(
                         Routes.applicationGuildCommands(this.clientId, guildId),
                         { body: dataToSend }
-                    );
-                    newIds[guildId] = (resp as any).id;
+                    ) as RESTPostAPIApplicationGuildCommandsResult;
+                    newIds[guildId] = resp.id;
                 } catch (error) {
                     nb++;
                     console.error(`⚠️ Guild ${guildId}: ${(error as Error).message}`);
@@ -468,8 +503,8 @@ export abstract class BaseInteractionManager {
         else if(cmd.command_scope == "global") {
             // Global deployment
             try {
-                const resp = await this.rest.post(Routes.applicationCommands(this.clientId), { body: dataToSend });
-                cmd.id = (resp as any).id;
+                const resp = await this.rest.post(Routes.applicationCommands(this.clientId), { body: dataToSend }) as RESTPostAPIApplicationCommandsResult;
+                cmd.id = resp.id;
                 await this.saveInteraction(file, cmd);
                 return true
             } catch (error) {
@@ -496,28 +531,42 @@ export abstract class BaseInteractionManager {
         return guild ? deployed.filter(([guildId]) => guildId === guild.id) : deployed;
     }
 
+    // The JSON files of the folder, without the ignored example files
+    private async listLocalFiles(): Promise<string[]> {
+        const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath)) || [];
+        return files.filter(file => !FileManager.isExampleFile(file));
+    }
+
     private async readInteraction(filePath: string): Promise<Interaction | null> {
         const data = await FileManager.readJsonFile(filePath);
         if (data === false) return null; // readJsonFile already logged why
 
+        let cmd: Interaction;
         try {
-            return InteractionValidator.validate(data);
+            cmd = InteractionValidator.validate(data);
         } catch (error) {
             Log.error(`Invalid interaction file ${filePath}: ${(error as Error).message}`);
             return null;
         }
+
+        // Its manager would never find it on Discord, nor clean its ID once deleted
+        if (!this.commandType.includes(cmd.type)) {
+            Log.error(`${filePath}: a ${InteractionDetails.typeLabel(cmd.type)} does not belong in the ${this.folderPath} folder`);
+            return null;
+        }
+        return cmd;
     }
 
     private async saveInteraction(fileName: string, cmd: Interaction): Promise<void> {
         delete cmd.filename
         const filePath = PathUtils.createPathFile(this.folderPath, fileName);
-        await fs.writeFile(filePath, JSON.stringify(cmd, null, 2));
+        await FileManager.writeFileAtomic(filePath, JSON.stringify(cmd, null, 2));
     }
 
     private async removeLocalIdFromFile(idListToDelete: string[]): Promise<void> {
 
-        const files = await FileManager.listJsonFiles(PathUtils.createPathFolder(this.folderPath));
-        if (!files || files.length === 0) {
+        const files = await this.listLocalFiles();
+        if (files.length === 0) {
             console.log('No local files to clean');
             return
         }

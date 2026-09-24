@@ -8,7 +8,7 @@ export class FileManager {
      * @param filePath Full path to the JSON file
      * @returns Parsed JSON object or false on failure
      */
-    static async readJsonFile(filePath: string): Promise<any | false> {
+    static async readJsonFile(filePath: string): Promise<unknown> {
         try {
             const data = await fs.readFile(filePath, 'utf8');
             return JSON.parse(data);
@@ -16,6 +16,11 @@ export class FileManager {
             Log.error(`Failed to read JSON file ${filePath}: ${error}`);
             return false;
         }
+    }
+
+    // Example files are shipped as templates and never read as interactions
+    static isExampleFile(filename: string): boolean {
+        return /^example/i.test(filename.trim());
     }
 
     static isSafeFilename(filename: string): boolean {
@@ -37,6 +42,21 @@ export class FileManager {
             return true;
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * Writes to a temporary file first, so a crash or a full disk never leaves a truncated file (and its IDs lost).
+     * The temporary file does not end with .json, so it is never listed.
+     */
+    static async writeFileAtomic(filePath: string, content: string): Promise<void> {
+        const tmpPath = `${filePath}.${process.pid}.tmp`;
+        try {
+            await fs.writeFile(tmpPath, content);
+            await fs.rename(tmpPath, filePath);
+        } catch (error) {
+            await fs.rm(tmpPath, {force: true});
+            throw error;
         }
     }
 
@@ -65,7 +85,7 @@ export class FileManager {
     static async writeJsonFile(
         directoryPath: string,
         filename: string,
-        data: any
+        data: unknown
     ): Promise<boolean> {
         // Skip if data is an Error array
         if (Array.isArray(data) && data.length === 1 && data[0] === 'Error') {
@@ -85,7 +105,7 @@ export class FileManager {
             const filePath = path.join(directoryPath, `${cleanFilename}.json`);
             const jsonContent = JSON.stringify(data, null, 2);
 
-            await fs.writeFile(filePath, jsonContent);
+            await this.writeFileAtomic(filePath, jsonContent);
             Log.info(`Successfully wrote data to ${filePath}`);
             return true;
 

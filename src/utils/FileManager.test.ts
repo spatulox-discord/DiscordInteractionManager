@@ -18,6 +18,33 @@ describe("FileManager.writeJsonFile", () => {
     });
 });
 
+describe("FileManager.writeFileAtomic", () => {
+    it("replaces the file without leaving a temporary file", async () => {
+        const root = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
+        try {
+            const file = path.join(root, "ping.json");
+            await fs.writeFile(file, "old");
+            await FileManager.writeFileAtomic(file, "new");
+            assert.equal(await fs.readFile(file, "utf8"), "new");
+            assert.deepEqual(await fs.readdir(root), ["ping.json"]);
+        } finally {
+            await fs.rm(root, {recursive: true, force: true});
+        }
+    });
+
+    it("removes the temporary file when the write fails", async () => {
+        const root = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
+        try {
+            // A folder cannot be replaced by a file
+            await fs.mkdir(path.join(root, "ping.json"));
+            await assert.rejects(FileManager.writeFileAtomic(path.join(root, "ping.json"), "new"));
+            assert.deepEqual(await fs.readdir(root), ["ping.json"]);
+        } finally {
+            await fs.rm(root, {recursive: true, force: true});
+        }
+    });
+});
+
 describe("FileManager.fileExists", () => {
     it("tells whether a file exists without logging an error", async (t) => {
         const error = t.mock.method(console, "error", () => {});
@@ -34,6 +61,17 @@ describe("FileManager.isSafeFilename", () => {
         }
         for (const name of ["", " ", ".", "..", "../ping", "a/b", "a\\b", "/etc/passwd"]) {
             assert.equal(FileManager.isSafeFilename(name), false, name);
+        }
+    });
+});
+
+describe("FileManager.isExampleFile", () => {
+    it("only matches names starting with example", () => {
+        for (const name of ["example.json", "Example_ping.json", " example"]) {
+            assert.equal(FileManager.isExampleFile(name), true, name);
+        }
+        for (const name of ["ping.json", "counterexample.json", "my_example.json"]) {
+            assert.equal(FileManager.isExampleFile(name), false, name);
         }
     });
 });

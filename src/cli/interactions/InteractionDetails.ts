@@ -44,11 +44,15 @@ export class InteractionDetails {
     // Empty when everyone can use the interaction
     static permissionsLabel(cmd: Interaction): string {
         const permissions = InteractionPayload.resolvePermissions(cmd);
-        return permissions === "0" ? "Administrators only" : Utils.bitfieldToPermissions(permissions).join(", ");
+        if (permissions === "0") return "Administrators only";
+
+        const names = Utils.bitfieldToPermissions(permissions);
+        const unknown = Utils.unknownPermissionBits(permissions);
+        return (unknown ? [...names, `Unknown (${unknown})`] : names).join(", ");
     }
 
     private static scopeLabel(cmd: Interaction): string {
-        if (cmd.command_scope === "global") return `global, ID ${cmd.id ?? "not deployed"}`;
+        if (cmd.command_scope === "global") return `global, ID ${cmd.id || "not deployed"}`; // "" was written by older generators
         const ids = Object.entries(cmd.id).map(([guildId, id]) => `${guildId} → ${id ?? "not deployed"}`);
         return `guild, ${ids.join(", ") || "no guild"}`;
     }

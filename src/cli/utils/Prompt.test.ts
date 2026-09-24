@@ -23,6 +23,14 @@ describe("Prompt.yesNoInput", () => {
         assert.equal(await scripted(["No"]).yesNoInput("?"), false);
     });
 
+    it("adds the answers to the question", async () => {
+        const prompt = new Prompt();
+        const questions: string[] = [];
+        prompt.ask = async (question: string) => { questions.push(question); return "y"; };
+        await prompt.yesNoInput("Required?");
+        assert.deepEqual(questions, ["Required? (y/n): "]);
+    });
+
     it("asks again on invalid answers", async () => {
         assert.equal(await scripted(["", "maybe", "n"]).yesNoInput("?"), false);
     });

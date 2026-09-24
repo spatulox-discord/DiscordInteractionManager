@@ -20,14 +20,14 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
             type: 2
         };
 
-        // 1. Type & Nom
+        // 1. Type & name
         console.clear();
         console.log("🍽️ 1/6 - Menu Type");
         console.log("2 = User Menu | 3 = Message Menu");
         config.type = parseInt(await this.input.requireInput("Type (2 or 3): ", val => ["2", "3"].includes(val))) as 2 | 3;
 
         console.clear();
-        config.name = (await this.input.requireInput("Name (1-32 chars): ", val => val.trim().length >= 1 && val.trim().length <= 32)).trim();
+        config.name = await this.requireText("Name (1-32 chars): ", 32);
         await this.nsfw(config)
 
         // 2. Permissions
@@ -52,7 +52,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         // 5. Guild Specific
         console.clear();
         console.log("⚙️ 5/6 - Guild Specific");
-        if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
+        if(await this.input.yesNoInput("Guild specific?")) {
             config.command_scope = "guild"
             config.id = await this.chooseGuilds()
         }

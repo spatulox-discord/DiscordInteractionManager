@@ -10,7 +10,14 @@
     "dist"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=18.17"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=21",
+      "onFail": "warn"
+    }
   },
   "repository": {
     "type": "git",

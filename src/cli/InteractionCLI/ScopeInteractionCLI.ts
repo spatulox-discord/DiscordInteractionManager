@@ -47,8 +47,17 @@ export abstract class ScopeInteractionCLI extends BaseCLI {
     protected async handleDelete(guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         const commands = guild ? await this.manager.listGuild(guild.id) : await this.manager.list();
         const selected = await this.selectCommands(commands);
-        if (selected.length === 0) return;
+        if (!await this.confirmDeletion(selected, guild ? `from guild "${guild.name}"` : "globally")) return;
         await this.manager.delete(selected, guild);
+    }
+
+    // A deletion cannot be undone, and "all" selects everything at once
+    protected async confirmDeletion(selected: Interaction[], where: string): Promise<boolean> {
+        if (selected.length === 0) return false;
+        const names = selected.map(cmd => cmd.name).join(", ");
+        if (await this.input.yesNoInput(`Delete ${names} ${where}?`)) return true;
+        console.log("Cancelled");
+        return false;
     }
 
     protected async selectCommands(commands: Interaction[]): Promise<Interaction[]> {
@@ -59,19 +68,21 @@ export abstract class ScopeInteractionCLI extends BaseCLI {
             return [];
         }
 
-        const input = (await this.input.ask('Enter numbers (separated by a comma, or "all" or "exit"): ')).trim().toLowerCase();
-        if (input === 'all') return commands;
-        if (input === 'exit') return [];
+        while (true) {
+            const input = (await this.input.ask('Enter numbers (separated by a comma), "all", or Enter to cancel: ')).trim().toLowerCase();
+            if (input === 'all') return commands;
+            if (!input || input === 'exit') return [];
 
-        const indices = Utils.parseIndexList(input);
-        if (!indices || indices.some(i => i >= commands.length)) {
-            console.log('Invalid number');
-            return [];
+            const indices = Utils.parseIndexList(input);
+            if (!indices || indices.some(i => i >= commands.length)) {
+                console.log('Invalid number');
+                continue;
+            }
+            const selected = indices.map(i => commands[i]!);
+
+            console.log(`${selected.length} selected ${handlerManagerType}`);
+            return selected;
         }
-        const selected = indices.map(i => commands[i]!);
-
-        console.log(`${selected.length} selected ${handlerManagerType}`);
-        return selected;
     }
 
     /**

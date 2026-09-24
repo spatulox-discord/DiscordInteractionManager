@@ -62,6 +62,19 @@ describe("BaseInteractionManager.delete", () => {
         assert.deepEqual((await readCommand("ping.json")).id, local.id);
     });
 
+    it("does not read the example files when cleaning the IDs", async () => {
+        await writeCommand("ping.json", local);
+        await fs.writeFile(path.join(folder, "commands", "example.json"), "{ template, not JSON");
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        const error = mock.method(console, "error", () => {});
+
+        await manager.delete([remote], guild(G1));
+
+        assert.equal(error.mock.callCount(), 0);
+        assert.deepEqual((await readCommand("ping.json")).id, {[G1]: null, [G2]: C2});
+    });
+
     it("only clears the ID of the guild it was deleted from", async () => {
         await writeCommand("ping.json", local);
         const {manager, calls} = createManager();
@@ -197,6 +210,44 @@ describe("BaseInteractionManager.listPerGuild", () => {
     });
 });
 
+describe("BaseInteractionManager progress", () => {
+    it("shows how many guilds are fetched on a terminal", async () => {
+        const {manager} = createManager(() => []);
+        const isTTY = process.stdout.isTTY;
+        const written: string[] = [];
+        mock.method(process.stdout, "write", (text: string) => { written.push(text); return true; });
+        process.stdout.isTTY = true;
+        try {
+            await manager.listPerGuild([guild(G1), guild(G2)]);
+        } finally {
+            process.stdout.isTTY = isTTY;
+            mock.restoreAll();
+        }
+
+        assert.deepEqual(written, ["\r📡 0/2 guild(s) fetched", "\r📡 1/2 guild(s) fetched", "\r📡 2/2 guild(s) fetched", "\n\n"]);
+    });
+});
+
+describe("BaseInteractionManager.countPerGuild", () => {
+    it("counts the global and guild commands available in each guild", async () => {
+        const remote: Record<string, unknown[]> = {
+            commands: [{id: C1, type: 1, name: "ping", description: "d"}, {id: C4, type: 3, name: "Report"}],
+            [G1]: [{id: C2, type: 1, name: "here", description: "d", guild_id: G1}],
+            [G2]: [],
+        };
+        const {manager} = createManager(({route}) => remote[route.split("/")[4] ?? "commands"]);
+        mock.method(console, "log", () => {});
+        const table = mock.method(console, "table", () => {});
+
+        await manager.countPerGuild([guild(G1), guild(G2)]);
+
+        assert.deepEqual(table.mock.calls[0]!.arguments[0], [
+            {"Guild": `Guild ${G1} (${G1})`, "Global Commands": 1, "Specific Commands": 1, "Total": 2},
+            {"Guild": `Guild ${G2} (${G2})`, "Global Commands": 1, "Specific Commands": 0, "Total": 1},
+        ]);
+    });
+});
+
 describe("BaseInteractionManager.update", () => {
     it("keeps updating the next commands when one has no local file", async () => {
         const pong = {name: "pong", type: 1, description: "Pong", command_scope: "global", id: C2};
@@ -315,6 +366,46 @@ describe("BaseInteractionManager.listFromFile", () => {
 
         assert.deepEqual(commands, []);
         assert.equal(error.mock.callCount(), 2);
+    });
+
+    it("keeps listing the other files when a permission bitfield is invalid", async () => {
+        await writeCommand("broken.json", {name: "broken", type: 1, description: "d", command_scope: "global", default_member_permissions: "abc"});
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "d", command_scope: "global", default_member_permissions: "8"});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        mock.method(console, "error", () => {});
+
+        assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["ping"]);
+    });
+
+    it("reports a context menu in the commands folder", async () => {
+        await writeCommand("report.json", {name: "Report", type: 3, command_scope: "global"});
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "d", command_scope: "global"});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        const error = mock.method(console, "error", () => {});
+
+        assert.deepEqual((await manager.listFromFile(Listing.LOCAL)).map(c => c.name), ["ping"]);
+        assert.match(String(error.mock.calls[0]!.arguments[0]), /report\.json: a Message Context Menu does not belong in the commands folder/);
+    });
+
+    it("warns about files defining the same command in the same scope", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("ping_copy.json", {name: "ping", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {[G1]: null}});
+        await writeCommand("here_elsewhere.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {[G2]: null}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+        const warn = mock.method(console, "warn", () => {});
+
+        await manager.listFromFile(Listing.ALL);
+        await manager.listFromFile(Listing.ALL, ALL_GUILDS);
+
+        assert.equal(warn.mock.callCount(), 1);
+        assert.match(String(warn.mock.calls[0]!.arguments[0]), /ping(_copy)?\.json and ping(_copy)?\.json both define the Slash "ping" globally/);
     });
 
     it("only skips files whose name starts with example", async () => {

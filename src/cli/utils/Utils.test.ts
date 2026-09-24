@@ -13,6 +13,12 @@ describe("Utils.permissionsToBitfield", () => {
         const expected = (PermissionFlagsBits.KickMembers | PermissionFlagsBits.BanMembers).toString();
         assert.equal(Utils.permissionsToBitfield(["KickMembers", "BanMembers"]), expected);
     });
+
+    it("rejects unknown names instead of restricting the command to administrators", () => {
+        for (const name of ["BanMember", "constructor", "toString", "__proto__"]) {
+            assert.throws(() => Utils.permissionsToBitfield(["KickMembers", name]), /Unknown permission/, name);
+        }
+    });
 });
 
 describe("Utils.bitfieldToPermissions", () => {
@@ -24,6 +30,19 @@ describe("Utils.bitfieldToPermissions", () => {
     it("decodes a bitfield into permission names", () => {
         const bitfield = (PermissionFlagsBits.KickMembers | PermissionFlagsBits.BanMembers).toString();
         assert.deepEqual(Utils.bitfieldToPermissions(bitfield), ["KickMembers", "BanMembers"]);
+    });
+});
+
+describe("Utils.unknownPermissionBits", () => {
+    it("returns the bits without a permission name", () => {
+        const unknownBit = 1n << 62n;
+        assert.equal(Utils.unknownPermissionBits((PermissionFlagsBits.BanMembers | unknownBit).toString()), unknownBit);
+    });
+
+    it("returns 0n when every bit is known", () => {
+        for (const bitfield of [null, undefined, "0", 0, PermissionFlagsBits.BanMembers.toString()]) {
+            assert.equal(Utils.unknownPermissionBits(bitfield), 0n, String(bitfield));
+        }
     });
 });
 

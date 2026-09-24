@@ -29,9 +29,10 @@ export class Prompt {
         }
     }
 
-    async yesNoInput(message: string): Promise<boolean> {
+    // Adds " (y/n): " to the question, so every yes / no prompt looks the same
+    async yesNoInput(question: string): Promise<boolean> {
         while (true) {
-            const value = (await this.ask(message)).trim().toLowerCase();
+            const value = (await this.ask(`${question} (y/n): `)).trim().toLowerCase();
             if (!value) {
                 console.log("⚠️  This field is required. Please enter a value.");
                 continue;
