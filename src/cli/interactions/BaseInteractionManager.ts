@@ -75,7 +75,7 @@ export abstract class BaseInteractionManager {
             const commandList: Interaction[] = [];
 
             for (const [_index, file] of files.entries()) {
-                if (file.includes("example")) continue;
+                if (/^example/i.test(file)) continue;
 
                 const cmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
                 if (!cmd) continue;

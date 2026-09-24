@@ -114,4 +114,16 @@ describe("BaseInteractionManager.listFromFile", () => {
 
         assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
     });
+
+    it("only skips files whose name starts with example", async () => {
+        await writeCommand("example_v2.json", {name: "example", type: 1, description: "d", command_scope: "global"});
+        await writeCommand("counterexample.json", {name: "counterexample", type: 1, description: "d", command_scope: "global"});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        const commands = await manager.listFromFile(Listing.LOCAL);
+
+        assert.deepEqual(commands.map(c => c.name), ["counterexample"]);
+    });
 });

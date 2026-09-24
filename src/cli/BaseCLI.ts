@@ -129,6 +129,7 @@ export abstract class BaseCLI {
         console.log(`  ├── ${Env.interactionFolderPath}/`);
         console.log('  │   ├── commands/     ← Slash Commands (type 1)');
         console.log('  │   └── context_menu/ ← Context Menus (type 2/3)');
+        console.log('  Files whose name starts with "example" are ignored');
 
         console.log('');
         console.log('🎯 Features:');
