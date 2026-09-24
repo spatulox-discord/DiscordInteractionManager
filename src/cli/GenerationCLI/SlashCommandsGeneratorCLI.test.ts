@@ -5,7 +5,7 @@ import {CommandOption, DiscordOptionType} from "../type/InteractionType";
 
 function scripted(answers: string[]): any {
     const generator = new SlashCommandGeneratorCLI();
-    (generator as any).prompt = async () => {
+    (generator as any).input.ask = async () => {
         const answer = answers.shift();
         if (answer === undefined) throw new Error("No more scripted answers");
         return answer;
@@ -93,13 +93,5 @@ describe("SlashCommandGeneratorCLI options rules", () => {
                 {type: 3, name: "a", description: "A", required: false},
             ],
         }]);
-    });
-});
-
-describe("BaseCLI.yesNoInput", () => {
-    it("ignores case and surrounding spaces", async () => {
-        assert.equal(await scripted(["Y"]).yesNoInput("?"), true);
-        assert.equal(await scripted([" YES "]).yesNoInput("?"), true);
-        assert.equal(await scripted(["No"]).yesNoInput("?"), false);
     });
 });

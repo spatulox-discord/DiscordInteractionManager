@@ -22,17 +22,17 @@ export class MainCLI extends BaseCLI {
             throw new Error(`Cannot connect to Discord, check DISCORD_BOT_TOKEN and your connection (${(error as Error).message})`);
         }
         await this.showMainMenu();
-        await this.execute();
+        this.exit();
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
         { label: "Manage Interactions", action: () => new InteractionCLI(this) },
         { label: "Generate Files", action: () => new GenerationCLI(this) },
         { label: "Help", action: () => this.showHelp() },
-        { label: "Exit", action: () => this },
+        { label: "Exit", action: () => this.exit() },
     ];
 
-    protected execute(): Promise<void> {
+    private exit(): never {
         console.log("👋  Bye !")
         process.exit()
     }

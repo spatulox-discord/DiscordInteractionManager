@@ -1,10 +1,5 @@
-#!/usr/bin/env node
-import readline from "readline";
-import {FileManager} from "../utils/FileManager";
 import {Env} from "../Env";
-import {PathUtils} from "../utils/PathUtils";
-import {FolderName} from "../type/FolderName";
-import {ContextMenuConfigGenerator, SlashCommandConfigGenerator} from "./type/InteractionType";
+import {Prompt} from "./utils/Prompt";
 
 export const BACK = Symbol("back");
 
@@ -13,27 +8,12 @@ export type MenuSelectionCLI = {
     action: () => BaseCLI | typeof BACK | Promise<unknown> | null
 }[]
 
-/**
- * --- BaseCLI ---
- */
 export abstract class BaseCLI {
-    private static _rl: readline.Interface | null = null;
     protected static botName = "Unknown Bot";
 
-    protected get rl() {
-        if (!BaseCLI._rl) {
-            BaseCLI._rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
-        }
-        return BaseCLI._rl;
-    }
-
-    constructor(protected parent?: BaseCLI) {}
+    constructor(parent?: BaseCLI, protected readonly input: Prompt = parent?.input ?? new Prompt()) {}
 
     protected abstract readonly menuSelection: MenuSelectionCLI;
-    protected abstract execute(): Promise<void>;
 
     protected getTitle(): string {
         return "BaseCLI";
@@ -51,7 +31,7 @@ export abstract class BaseCLI {
             });
             console.log('═'.repeat(40));
 
-            const choice = (await this.prompt('Choose an option: ')).trim();
+            const choice = (await this.input.ask('Choose an option: ')).trim();
             if (choice.toLowerCase() === "exit") return;
 
             const option = this.menuSelection[Number(choice) - 1];
@@ -61,49 +41,12 @@ export abstract class BaseCLI {
                 const result = await option.action();
                 if (result === BACK) return;
                 if (result instanceof BaseCLI) {
-                    if (result !== this) {
-                        await result.showMainMenu();
-                        continue;
-                    }
-                    await this.execute();
+                    await result.showMainMenu();
+                    continue;
                 }
             }
 
-            await this.prompt('Press Enter to continue...');
-        }
-    }
-
-    protected async prompt(question: string): Promise<string> {
-        return new Promise(resolve => this.rl.question(question, resolve));
-    }
-
-    protected async requireInput(message: string, validator?: (val: string) => boolean, canBeEmpty: boolean = false): Promise<string>{
-        while (true) {
-            const value = (await this.prompt(message));
-            if (!value && !canBeEmpty) {
-                console.log("⚠️  This field is required. Please enter a value.");
-                continue;
-            }
-            if (validator && !validator(value)) {
-                console.log("⚠️  Invalid input. Try again.");
-                continue;
-            }
-            return value;
-        }
-    }
-
-    protected async yesNoInput(message: string): Promise<boolean> {
-        while (true) {
-            const value = (await this.prompt(message)).trim().toLowerCase();
-            if (!value) {
-                console.log("⚠️  This field is required. Please enter a value.");
-                continue;
-            }
-            if (!["y", "n", "yes", "no"].includes(value)) {
-                console.log("⚠️  Invalid input. Try again.");
-                continue;
-            }
-            return value == "y" || value == "yes";
+            await this.input.ask('Press Enter to continue...');
         }
     }
 
@@ -147,45 +90,5 @@ export abstract class BaseCLI {
 
     protected goBack(): typeof BACK {
         return BACK;
-    }
-
-    protected async save(folderName: FolderName,config: ContextMenuConfigGenerator | SlashCommandConfigGenerator): Promise<void> {
-        let tmp: void | -1 = -1
-        while (tmp == -1) {
-            const filename = await this.requireInput("Filename : ", FileManager.isSafeFilename);
-            tmp = await this.saveFile(folderName, filename, config);
-        }
-        return tmp
-    }
-
-    private async saveFile<T>(
-        folderName: string,
-        filename: string,
-        data: T,
-    ): Promise<-1 | void> {
-        // 2. Preview + Confirmation
-        console.clear();
-        console.log("✨ Final JSON preview:");
-        console.log(JSON.stringify(data, null, 2));
-
-        let finalFilename = filename;
-        if(await FileManager.fileExists(PathUtils.createPathFile(folderName, filename.replace(/\.json$/i, '') + ".json"))){
-            if (!await this.yesNoInput(`"${finalFilename}" already exists. Overwrite? (y/n): `)) {
-                return -1
-            }
-        }
-
-        if (!await this.yesNoInput("\nSave this file? (y/n): ")) {
-            console.log("Cancelled");
-            return;
-        }
-
-        if (await FileManager.writeJsonFile(PathUtils.createPathFolder(folderName), finalFilename, data)) {
-            console.log(`File saved: ${PathUtils.createPathFile(folderName, finalFilename)}`);
-        } else {
-            console.error("The file could not be saved");
-        }
-
-        return
     }
 }

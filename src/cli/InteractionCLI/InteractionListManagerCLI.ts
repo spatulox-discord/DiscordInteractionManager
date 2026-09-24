@@ -1,6 +1,6 @@
 import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
 import { BaseInteractionManager } from "../interactions/BaseInteractionManager";
-import {GuildListManager} from "../GuildListManager";
+import {GuildSelector} from "../GuildSelector";
 import {Env} from "../../Env";
 import {Guild} from "discord.js";
 import {PathUtils} from "../../utils/PathUtils";
@@ -22,16 +22,16 @@ export class InteractionListManagerCLI extends BaseCLI {
         this.managerKey = managerKey;
         this.menuSelection = [
             { label: `List Global ${this.manager.folderPath}`, action: () => this.listRemote() },
-            { label: `List Specific ${this.manager.folderPath} for a Guild`, action: async () => this.guildListRemote(await new GuildListManager(Env.clientId, Env.token).chooseGuild()) },
-            { label: `List ${this.manager.folderPath} for a Guild`, action: async () => this.guildListAllRemote(await new GuildListManager(Env.clientId, Env.token).chooseGuild()) },
+            { label: `List Specific ${this.manager.folderPath} for a Guild`, action: async () => this.guildListRemote(await this.guildSelector().chooseGuild()) },
+            { label: `List ${this.manager.folderPath} for a Guild`, action: async () => this.guildListAllRemote(await this.guildSelector().chooseGuild()) },
             { label: `Count ${this.manager.folderPath} per Guilds`, action: async () => this.guildCountAllRemote() },
             { label: `Save global ${this.manager.folderPath} into local file`, action: async () => this.getAndSaveToLocalFile() },
             { label: 'Back', action: () => this.goBack() },
         ];
     }
 
-    protected execute(): Promise<void> {
-        throw new Error("Method not implemented.");
+    protected guildSelector(): GuildSelector {
+        return new GuildSelector(Env.token, this.input);
     }
 
     protected async listRemote(): Promise<void> {
@@ -59,7 +59,7 @@ export class InteractionListManagerCLI extends BaseCLI {
     }
 
     protected async guildCountAllRemote(): Promise<void> {
-        await this.manager.listAllGuilds(await new GuildListManager(Env.clientId, Env.token).list(false))
+        await this.manager.listAllGuilds(await this.guildSelector().list(false))
     }
 
     protected async getAndSaveToLocalFile(){

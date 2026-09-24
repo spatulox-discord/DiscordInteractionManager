@@ -1,36 +1,19 @@
 import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
-import {
-    //AllInteractionManager,
-    CommandManager,
-    ContextMenuManager
-} from "../interactions/InteractionManager";
+import {CommandManager, ContextMenuManager} from "../interactions/InteractionManager";
 import {InteractionManagerCLI} from "./InteractionManagerCLI";
 import {Env} from "../../Env";
 
 export class InteractionCLI extends BaseCLI {
-
-    private managers: Record<string, any> = {};
+    private readonly commandManager = new CommandManager(Env.clientId, Env.token);
+    private readonly contextMenuManager = new ContextMenuManager(Env.clientId, Env.token);
 
     protected getTitle(): string {
         return '🔄 Interaction Manager CLI';
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
-        { label: "Command Manager", action: () => new InteractionManagerCLI(this, this.managers["CommandManager"], "CommandManager") },
-        { label: "ContextMenu Manager", action: () => new InteractionManagerCLI(this, this.managers["ContextMenuManager"], "ContextMenuManager") },
-        //{ label: "All Interaction Manager", action: () => new InteractionManagerCLI(this, this.managers["InteractionManager"], "InteractionManager") },
+        { label: "Command Manager", action: () => new InteractionManagerCLI(this, this.commandManager, "CommandManager") },
+        { label: "ContextMenu Manager", action: () => new InteractionManagerCLI(this, this.contextMenuManager, "ContextMenuManager") },
         { label: 'Back', action: () => this.goBack()},
     ];
-
-    constructor(parent?: BaseCLI) {
-        super(parent);
-        const { clientId, token } = Env;
-        this.managers['CommandManager'] = new CommandManager(clientId, token);
-        this.managers['ContextMenuManager'] = new ContextMenuManager(clientId, token);
-        //this.managers['InteractionManager'] = new AllInteractionManager(clientId, token);
-    }
-
-    protected async execute(): Promise<void> {
-        throw new Error("Method not implemented.");
-    }
 }

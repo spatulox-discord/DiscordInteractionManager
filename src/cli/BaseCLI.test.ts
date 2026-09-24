@@ -1,13 +1,14 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
 import {BaseCLI, MenuSelectionCLI} from "./BaseCLI";
+import {Prompt} from "./utils/Prompt";
 
 let answers: string[] = [];
 
 beforeEach(() => {
     mock.method(console, "log", () => {});
     mock.method(console, "clear", () => {});
-    mock.method(BaseCLI.prototype as any, "prompt", async () => {
+    mock.method(Prompt.prototype, "ask", async () => {
         const answer = answers.shift();
         if (answer === undefined) throw new Error("No more scripted answers");
         return answer;
@@ -20,7 +21,6 @@ class ChildMenu extends BaseCLI {
         {label: "Action", action: async () => { this.calls++; }},
         {label: "Back", action: () => this.goBack()},
     ];
-    protected async execute(): Promise<void> {}
 }
 
 class ParentMenu extends BaseCLI {
@@ -29,7 +29,6 @@ class ParentMenu extends BaseCLI {
         {label: "Child", action: () => this.child},
         {label: "Back", action: () => this.goBack()},
     ];
-    protected async execute(): Promise<void> {}
     run() { return this.showMainMenu(); }
 }
 

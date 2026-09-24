@@ -15,11 +15,11 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
-        { label: "Generate Slash Command", action: () => this },
+        { label: "Generate Slash Command", action: () => this.generate() },
         { label: "Back", action: () => this.goBack() },
     ];
 
-    protected async execute(): Promise<void> {
+    protected async generate(): Promise<void> {
         const config: SlashCommandConfigGenerator = {
             command_scope: "global",
             id: "",
@@ -31,11 +31,11 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
         console.clear();
         console.log("📝 1/8 - Base");
-        config.name = await this.requireInput(
+        config.name = await this.input.requireInput(
             "Name (a-z0-9_-, 1-32 chars): ",
             val => /^[a-z0-9_-]{1,32}$/.test(val)
         );
-        config.description = await this.requireInput(
+        config.description = await this.input.requireInput(
             "Description (1-100 chars): ",
             val => val.length >= 1 && val.length <= 100
         );
@@ -47,7 +47,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
         console.clear();
         console.log("💬 3/8 - DM Permissions");
-        config.dm_permission = await this.yesNoInput("Authorize DM ? (y/n): ");
+        config.dm_permission = await this.input.yesNoInput("Authorize DM ? (y/n): ");
 
         console.clear();
         console.log("💬 4/8 - Context");
@@ -72,7 +72,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
         console.clear();
         console.log("⚙️ 7/8 - Guild Specific");
-        if(await this.yesNoInput("Guild Specific ? (y/n): ")) {
+        if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
             const id = await this.optionalGuildIds();
             if(id) {
                 config.command_scope = "guild"
@@ -107,7 +107,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
 
         if (parent === DiscordOptionType.SUB_COMMAND_GROUP) {
             console.log("A subcommand group needs at least one subcommand");
-        } else if (!await this.yesNoInput("Add options/subcommands ? (y/n): ")) {
+        } else if (!await this.input.yesNoInput("Add options/subcommands ? (y/n): ")) {
             return options;
         }
 
@@ -117,7 +117,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             console.log("🚀 Options type :");
             console.log("Valid options : " + allowed.map(type => `${type}.${DiscordOptionType[type]}`).join(', '));
 
-            const type = Number(await this.requireInput(
+            const type = Number(await this.input.requireInput(
                 `Type (${allowed.join(', ')}): `,
                 val => allowed.includes(Number(val))
             )) as DiscordOptionType;
@@ -128,17 +128,17 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
                 console.log("Maximum of 25 options reached");
                 break;
             }
-            if (!await this.yesNoInput("Other option ? (y/n): ")) break;
+            if (!await this.input.yesNoInput("Other option ? (y/n): ")) break;
         }
         return SlashCommandGeneratorCLI.sortRequiredFirst(options);
     }
 
     private async buildOption(type: DiscordOptionType, usedNames: string[] = []): Promise<CommandOption> {
-        const name = await this.requireInput(
+        const name = await this.input.requireInput(
             "Option name (a-z0-9_-, 1-32, unique): ",
             val => /^[a-z0-9_-]{1,32}$/.test(val) && !usedNames.includes(val)
         );
-        const description = await this.requireInput(
+        const description = await this.input.requireInput(
             "Description (1-100): ",
             val => val.length >= 1 && val.length <= 100
         );
@@ -150,7 +150,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             return option;
         }
 
-        option.required = await this.yesNoInput("Required ? (y/n): ");
+        option.required = await this.input.yesNoInput("Required ? (y/n): ");
         await this.handleOptionType(option, type);
         return option;
     }
@@ -158,7 +158,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     private async handleOptionType(option: CommandOption, type: DiscordOptionType): Promise<void> {
         switch (type) {
             case 3: // STRING
-                if (await this.yesNoInput("Autocomplete ? ")) option.autocomplete = true;
+                if (await this.input.yesNoInput("Autocomplete ? ")) option.autocomplete = true;
                 option.min_length = await this.optionalNumber("Min length (0-6000): ", {integer: true, min: 0, max: 6000});
                 option.max_length = await this.optionalNumber("Max Length (1-6000): ", {integer: true, min: 1, max: 6000});
                 if (!option.autocomplete) option.choices = await this.addChoices(type);
@@ -177,7 +177,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     }
 
     private async optionalNumber(prompt: string, rules: { integer?: boolean, min?: number, max?: number } = {}): Promise<number | undefined> {
-        const input = await this.requireInput(prompt, val => {
+        const input = await this.input.requireInput(prompt, val => {
             if (!val.trim()) return true;
             const num = Number(val);
             return Number.isFinite(num)
@@ -195,16 +195,16 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     }
 
     private async addChoices(type: DiscordOptionType): Promise<Choice[] | undefined> {
-        if (!await this.yesNoInput("Add Choices (25 max) ? ")) return undefined;
+        if (!await this.input.yesNoInput("Add Choices (25 max) ? ")) return undefined;
 
         const valueHint = type === DiscordOptionType.STRING ? "≤100 chars" : type === DiscordOptionType.INTEGER ? "integer" : "number";
         const choices: Choice[] = [];
         while (choices.length < 25) {
-            const name = await this.requireInput("Choice name (≤100): ", val => val.length <= 100);
-            const value = await this.requireInput(`Choice value (${valueHint}): `, val => SlashCommandGeneratorCLI.isValidChoiceValue(type, val));
+            const name = await this.input.requireInput("Choice name (≤100): ", val => val.length <= 100);
+            const value = await this.input.requireInput(`Choice value (${valueHint}): `, val => SlashCommandGeneratorCLI.isValidChoiceValue(type, val));
             choices.push({ name, value: type === DiscordOptionType.STRING ? value : Number(value) });
 
-            if (!await this.yesNoInput("Another choice ? ")) break;
+            if (!await this.input.yesNoInput("Another choice ? ")) break;
         }
         if(choices.length >= 25){
             console.log("Maximum of 25 choices reached")
@@ -220,7 +220,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
                 .join(', ')
         );
 
-        const input = await this.requireInput(
+        const input = await this.input.requireInput(
             "Types (separated by comma, or leave empty for all): ",
             (val) => {
                 if (!val.trim()) return true;

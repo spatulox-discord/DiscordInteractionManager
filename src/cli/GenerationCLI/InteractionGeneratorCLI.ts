@@ -1,4 +1,4 @@
-import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
+import {BaseCLI} from "../BaseCLI";
 import {DiscordRegex} from "../../utils/DiscordRegex";
 import {
     ContextMenuConfigGenerator,
@@ -7,16 +7,39 @@ import {
     SpecificCommandId
 } from "../type/InteractionType";
 import {Utils} from "../utils/Utils";
+import {FolderName} from "../../type/FolderName";
+import {FileManager} from "../../utils/FileManager";
+import {PathUtils} from "../../utils/PathUtils";
 
 export abstract class InteractionGeneratorCLI extends BaseCLI {
-    protected abstract getTitle(): string
+    protected abstract generate(): Promise<void>;
 
-    protected abstract readonly menuSelection: MenuSelectionCLI
+    protected async save(folderName: FolderName, config: ContextMenuConfigGenerator | SlashCommandConfigGenerator): Promise<void> {
+        console.clear();
+        console.log("✨ Final JSON preview:");
+        console.log(JSON.stringify(config, null, 2));
 
-    protected abstract execute(): Promise<void>;
+        let filename: string;
+        while (true) {
+            filename = (await this.input.requireInput("Filename : ", FileManager.isSafeFilename)).trim().replace(/\.json$/i, '');
+            if (!await FileManager.fileExists(PathUtils.createPathFile(folderName, `${filename}.json`))) break;
+            if (await this.input.yesNoInput(`"${filename}" already exists. Overwrite? (y/n): `)) break;
+        }
+
+        if (!await this.input.yesNoInput("\nSave this file? (y/n): ")) {
+            console.log("Cancelled");
+            return;
+        }
+
+        if (await FileManager.writeJsonFile(PathUtils.createPathFolder(folderName), filename, config)) {
+            console.log(`File saved: ${PathUtils.createPathFile(folderName, `${filename}.json`)}`);
+        } else {
+            console.error("The file could not be saved");
+        }
+    }
 
     protected async nsfw(config: SlashCommandConfigGenerator | ContextMenuConfigGenerator): Promise<void> {
-        if(await this.yesNoInput("NSFW ? (y/n)")){
+        if(await this.input.yesNoInput("NSFW ? (y/n)")){
             config.nsfw = true
         }
     }
@@ -31,7 +54,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
 
         console.log("Valid Permissions:\n" + numberedPerms);
 
-        const input = await this.requireInput(
+        const input = await this.input.requireInput(
             "Permission numbers (comma-separated, 'everyone', or leave empty): ",
             (val) => {
                 if (!val.trim() || val.toLowerCase() === 'everyone') return true;
@@ -67,7 +90,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
 
     protected async optionalGuildIds(): Promise<SpecificCommandId | undefined> {
         const isCancel = (val: string) => !val.trim() || val.trim().toLowerCase() === 'none';
-        const input = await this.requireInput(
+        const input = await this.input.requireInput(
             "Guild IDs (separated by comma, or 'none' to cancel): ",
             val => isCancel(val) || val.split(',').every(id => DiscordRegex.GUILD_ID.test(id.trim())),
             true
@@ -88,7 +111,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             .map((key, index) => `${index}=${key}`)
             .join(', ');
 
-        const input = await this.requireInput(
+        const input = await this.input.requireInput(
             `Enter context indices (${contextChoices}) separated by commas: `,
             (val) => {
                 if (!val) return false;
@@ -129,7 +152,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             .map((key, index) => `${index}=${key}`)
             .join(', ');
 
-        const input = await this.requireInput(
+        const input = await this.input.requireInput(
             `Enter integration context indices (${contextChoices}) separated by commas: `,
             (val) => {
                 if (!val) return false;

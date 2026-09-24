@@ -13,8 +13,4 @@ export class GenerationCLI extends BaseCLI {
         { label: 'Generate Context Menu Template', action: () => new ContextMenuGeneratorCLI(this) },
         { label: 'Back', action: () => this.goBack() },
     ];
-
-    protected async execute(): Promise<void> {
-        throw new Error("Method not implemented.");
-    }
 }

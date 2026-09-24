@@ -1,44 +1,23 @@
-import { BaseCLI, MenuSelectionCLI } from "./BaseCLI";
 import {REST} from "@discordjs/rest";
-import { Routes } from 'discord-api-types/v10';
+import {Routes} from 'discord-api-types/v10';
 import {Guild} from "discord.js";
+import {Prompt} from "./utils/Prompt";
 
 const GUILDS_PAGE_SIZE = 200;
 
-export class GuildListManager extends BaseCLI {
+export class GuildSelector {
     protected guilds: Guild[] = [];
-
-    protected clientId: string;
-    protected token: string;
     protected rest: REST;
 
-    constructor(clientId: string, token: string) {
-        super();
-        this.clientId = clientId;
-        this.token = token;
+    constructor(token: string, private readonly input: Prompt = new Prompt()) {
         this.rest = new REST({ version: '10' }).setToken(token);
-    }
-
-    protected getTitle(): string {
-        return "Guilds Selection";
-    }
-
-    protected readonly menuSelection: MenuSelectionCLI = [
-        { label: "List guilds", action: () => this.list() },
-        { label: "Choose guild", action: () => this.chooseGuild() },
-        { label: "Back", action: () => this.goBack() },
-    ];
-
-    protected async execute(): Promise<void> {
-        throw new Error("Method not implemented.");
     }
 
     async list(printResult: boolean = true): Promise<Guild[]> {
         console.clear();
-        if(printResult) console.log(`${this.getTitle()}\n`);
+        if(printResult) console.log("Guilds Selection\n");
 
         try {
-
             this.guilds = await this.fetchAllGuilds();
 
             if(printResult){
@@ -73,12 +52,6 @@ export class GuildListManager extends BaseCLI {
         }
     }
 
-    async getGuild(guildId: string): Promise<Guild | null> {
-        return await this.rest.get(
-            Routes.guild(guildId)
-        ) as Guild | null
-    }
-
     async chooseGuild(): Promise<Guild | null> {
         await this.list()
         console.log("Please select a guild to continue")
@@ -87,7 +60,7 @@ export class GuildListManager extends BaseCLI {
             return null;
         }
 
-        const indexStr = await this.requireInput(
+        const indexStr = await this.input.requireInput(
             "Enter guild index (0-" + (this.guilds.length - 1) + "): ",
             (val) => {
                 const num = Number(val);

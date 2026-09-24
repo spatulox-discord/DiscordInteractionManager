@@ -9,11 +9,11 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
     }
 
     protected readonly menuSelection: MenuSelectionCLI = [
-        { label: "Generate Context Menu", action: () => this },
+        { label: "Generate Context Menu", action: () => this.generate() },
         { label: "Back", action: () => this.goBack() },
     ];
 
-    protected async execute(): Promise<void> {
+    protected async generate(): Promise<void> {
         const config: ContextMenuConfigGenerator = {
             command_scope: "global",
             id: "",
@@ -26,10 +26,10 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         console.clear();
         console.log("🍽️ 1/7 - Menu Type");
         console.log("2 = User Menu | 3 = Message Menu");
-        config.type = parseInt(await this.requireInput("Type (2 or 3): ", val => ["2", "3"].includes(val))) as 2 | 3;
+        config.type = parseInt(await this.input.requireInput("Type (2 or 3): ", val => ["2", "3"].includes(val))) as 2 | 3;
 
         console.clear();
-        config.name = await this.requireInput("Name (1-32 chars): ", val => val.length >= 1 && val.length <= 32);
+        config.name = await this.input.requireInput("Name (1-32 chars): ", val => val.length >= 1 && val.length <= 32);
         await this.nsfw(config)
 
         // 2. Permissions
@@ -40,7 +40,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         // 3. DM
         console.clear();
         console.log("💬 3/7 - DM Permissions");
-        config.dm_permission = await this.yesNoInput("Authorize in DM ? (y/n): ");
+        config.dm_permission = await this.input.yesNoInput("Authorize in DM ? (y/n): ");
 
         console.clear();
         console.log("💬 4/7 - Context");
@@ -59,7 +59,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         // 4. Guild Specific
         console.clear();
         console.log("⚙️ 6/7 - Guild Specific");
-        if(await this.yesNoInput("Guild Specific ? (y/n): ")) {
+        if(await this.input.yesNoInput("Guild Specific ? (y/n): ")) {
             const id = await this.optionalGuildIds();
             if(id) {
                 config.id = id

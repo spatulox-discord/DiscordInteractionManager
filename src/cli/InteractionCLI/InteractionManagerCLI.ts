@@ -1,7 +1,5 @@
-import {BaseCLI, MenuSelectionCLI} from "../BaseCLI";
+import {BaseCLI} from "../BaseCLI";
 import {BaseInteractionManager} from "../interactions/BaseInteractionManager";
-import {GuildListManager} from "../GuildListManager";
-import {Env} from "../../Env";
 import {InteractionListManagerCLI} from "./InteractionListManagerCLI";
 import {Guild} from "discord.js";
 import {Interaction} from "../type/InteractionType";
@@ -9,17 +7,8 @@ import {Listing} from "../enum/Listing";
 
 export class InteractionManagerCLI extends InteractionListManagerCLI {
 
-    protected menuSelection: MenuSelectionCLI;
-    protected readonly manager: BaseInteractionManager;
-    protected readonly managerKey: string;
-
-    protected getTitle(): string {
-        return `${this.managerKey} - ${this.manager.folderPath}`;
-    }
     constructor(parent: BaseCLI, manager: BaseInteractionManager, managerKey: string) {
         super(parent, manager, managerKey);
-        this.manager = manager;
-        this.managerKey = managerKey;
         this.menuSelection = [
             { label: `List ${this.manager.folderPath}`, action: () => new InteractionListManagerCLI(this, manager, this.managerKey) },
             { label: "Deploy local", action: () => this.handleDeploy() },
@@ -27,10 +16,6 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
             { label: "Delete remote", action: () => this.handleDelete() },
             { label: 'Back', action: () => this.goBack() },
         ];
-    }
-
-    protected execute(): Promise<void> {
-        throw new Error("Method not implemented.");
     }
 
     private async handleDeploy(): Promise<void> {
@@ -41,7 +26,7 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
 
     private async handleUpdate(): Promise<void> {
         let guild: Guild | null = null
-        const rep = await this.yesNoInput("Do you want to update a global command or a specific guild command (y=global/n=specific): ")
+        const rep = await this.input.yesNoInput("Do you want to update a global command or a specific guild command (y=global/n=specific): ")
 
         console.log('═'.repeat(80));
         console.log(`ACTUAL DEPLOYED ${this.manager.folderPath?.toUpperCase()}`)
@@ -49,7 +34,7 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
             console.log("Specific guild interaction cannot be detected here, but can still be updated")
             await this.listRemote()
         } else {
-            guild = await new GuildListManager(Env.clientId, Env.token).chooseGuild()
+            guild = await this.guildSelector().chooseGuild()
             if(!guild){
                 console.log("Error, cannot find guild")
                 return
@@ -65,13 +50,13 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
 
     private async handleDelete(): Promise<void> {
 
-        const rep = await this.yesNoInput("Do you want to delete a global command or a specific guild command (y=global/n=specific): ")
+        const rep = await this.input.yesNoInput("Do you want to delete a global command or a specific guild command (y=global/n=specific): ")
         let guild: Guild | null = null
         let commands: Interaction[]
         if(rep){
             commands = await this.manager.list()
         } else {
-            guild = await new GuildListManager(Env.clientId, Env.token).chooseGuild()
+            guild = await this.guildSelector().chooseGuild()
             if(!guild){
                 console.log("Error, cannot find guild")
                 return
@@ -92,7 +77,7 @@ export class InteractionManagerCLI extends InteractionListManagerCLI {
             return [];
         }
 
-        const input = await this.prompt('Enter numbers (sperated by a comma, or "all" or "exit"): ');
+        const input = await this.input.ask('Enter numbers (sperated by a comma, or "all" or "exit"): ');
         if (input.toLowerCase() === 'all') return commands;
         if (input.toLowerCase() === 'exit') return [];
 

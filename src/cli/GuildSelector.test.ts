@@ -1,6 +1,6 @@
 import {beforeEach, describe, it, mock} from "node:test";
 import assert from "node:assert/strict";
-import {GuildListManager} from "./GuildListManager";
+import {GuildSelector} from "./GuildSelector";
 
 beforeEach(() => {
     mock.method(console, "log", () => {});
@@ -8,11 +8,11 @@ beforeEach(() => {
     mock.method(console, "table", () => {});
 });
 
-describe("GuildListManager.list", () => {
+describe("GuildSelector.list", () => {
     it("fetches every page of guilds", async () => {
         const all = Array.from({length: 450}, (_, i) => ({id: String(1000 + i), name: `Guild ${i}`}));
         const queries: string[] = [];
-        const manager = new GuildListManager("123456789012345678", "token");
+        const manager = new GuildSelector("token");
         (manager as any).rest = {
             get: async (_route: string, options: { query: URLSearchParams }) => {
                 queries.push(options.query.toString());
