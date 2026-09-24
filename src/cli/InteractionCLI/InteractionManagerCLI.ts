@@ -19,7 +19,7 @@ export class InteractionManagerCLI extends BaseCLI {
     protected readonly menuSelection: MenuSelectionCLI = [
         { label: `Global ${this.manager.folderPath}`, action: () => new GlobalInteractionCLI(this, this.manager, this.managerKey) },
         { label: `Guild ${this.manager.folderPath}`, action: () => this.openGuild() },
-        { label: `${this.manager.folderPath} in all guilds`, action: () => new AllGuildsInteractionCLI(this, this.manager, this.managerKey) },
+        { label: `${this.manager.folderPath.charAt(0).toUpperCase() + this.manager.folderPath.slice(1)} in all guilds`, action: () => new AllGuildsInteractionCLI(this, this.manager, this.managerKey) },
         { label: 'Back', action: () => this.goBack() },
     ];
 
