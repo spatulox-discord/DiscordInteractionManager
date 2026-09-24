@@ -72,8 +72,10 @@ You will be greet by a CLI :
 3. Help
 4. Exit
 ════════════════════════════════════════
-Choose an option: 
+Choose an option (or "exit" to quit):
 ```
+
+Type the number of an option, or `exit` in any menu to quit.
 
 # How it works
 ## Creating an interaction
