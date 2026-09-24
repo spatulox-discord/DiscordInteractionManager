@@ -6,7 +6,7 @@ Date format : dd/mm/yyyy
     - Tests with `node:test` + `tsx` (`npm test`), and a `prepublishOnly` script running the type check, the tests and the build before each publish
     - Autocomplete can be enabled on `INTEGER` and `NUMBER` options, not only on `STRING` ones. As for strings, choices are skipped when autocomplete is on
     - `NUMBER` options can have choices
-    - `engines` : Node `>=18`, required by `@discordjs/rest`
+    - `engines` : Node `>=18.17`, required by `undici` (used by `@discordjs/rest`)
     - The optional variables (`DISCORD_INTERACTION_FOLDER`, `DISCORD_BOT_DEV`) are documented in `.env.example`
     - Stage channels (`13`) can be chosen in the channel types of a `CHANNEL` option
     - After a listing, the numbers of the table show the details of the interactions : scope and IDs, permissions, contexts, integration types, NSFW, localizations, local file, and the options as a tree (types, required, limits, autocomplete, channel types, choices). "List all available" in the Guild menu now prints one table (the GuildID column tells global interactions apart)
