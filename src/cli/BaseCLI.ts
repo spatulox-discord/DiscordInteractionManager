@@ -4,6 +4,8 @@ import {Prompt} from "./utils/Prompt";
 export const BACK = Symbol("back");
 // Returned by an action that already waited for the user, to skip "Press Enter to continue"
 export const NO_PAUSE = Symbol("no pause");
+// Returned by a menu when "exit" was typed, so every parent menu closes too
+const EXIT = Symbol("exit");
 
 export type MenuSelectionCLI = {
     label: string;
@@ -22,7 +24,7 @@ export abstract class BaseCLI {
         return "BaseCLI";
     }
 
-    protected async showMainMenu(): Promise<void> {
+    protected async showMainMenu(): Promise<typeof EXIT | void> {
         while (true) {
             console.clear();
             console.log(this.getTitle());
@@ -34,8 +36,8 @@ export abstract class BaseCLI {
             });
             console.log('═'.repeat(40));
 
-            const choice = (await this.input.ask('Choose an option: ')).trim();
-            if (choice.toLowerCase() === "exit") return;
+            const choice = (await this.input.ask('Choose an option (or "exit" to quit): ')).trim();
+            if (choice.toLowerCase() === "exit") return EXIT;
 
             const option = this.menuSelection[Number(choice) - 1];
             if (!option) {
@@ -46,7 +48,7 @@ export abstract class BaseCLI {
                     if (result === BACK) return;
                     if (result === NO_PAUSE) continue;
                     if (result instanceof BaseCLI) {
-                        await result.showMainMenu();
+                        if (await result.showMainMenu() === EXIT) return EXIT;
                         continue;
                     }
                 } catch (error) {
@@ -95,6 +97,7 @@ export abstract class BaseCLI {
         console.log('🎮 Selection:');
         console.log('  • Numbered lists appear after the interaction list');
         console.log('  • Enter: "1,3,5" or "all" to select which interaction you want to apply the action, or nothing to cancel');
+        console.log('  • Type "exit" in any menu to quit');
 
         console.log('');
         console.log('🔗 Wiki: https://github.com/spatulox-discord/DiscordInteractionManager/wiki');

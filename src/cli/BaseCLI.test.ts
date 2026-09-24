@@ -73,4 +73,10 @@ describe("BaseCLI navigation", () => {
         await new ParentMenu().run();
         assert.deepEqual(answers, []);
     });
+
+    it("leaves every menu when typing exit in a sub menu", async () => {
+        answers = ["1", "exit"];
+        await new ParentMenu().run();
+        assert.deepEqual(answers, []);
+    });
 });
