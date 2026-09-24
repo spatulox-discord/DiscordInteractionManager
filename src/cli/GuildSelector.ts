@@ -61,14 +61,11 @@ export class GuildSelector {
 
         const indexStr = await this.input.requireInput(
             "Enter guild index (0-" + (this.guilds.length - 1) + "): ",
-            (val) => {
-                const num = Number(val);
-                return !isNaN(num) && num >= 0 && num < this.guilds.length;
-            },
+            (val) => /^\d+$/.test(val.trim()) && Number(val) < this.guilds.length,
             false
         );
 
-        const index = Number(indexStr);
+        const index = Number(indexStr.trim());
         return this.guilds[index] ?? null;
     }
 }
