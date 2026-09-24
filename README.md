@@ -1,6 +1,8 @@
 # Discord Interaction Manager
 [![CI](https://github.com/spatulox-discord/DiscordInteractionManager/actions/workflows/ci.yml/badge.svg)](https://github.com/spatulox-discord/DiscordInteractionManager/actions/workflows/ci.yml)
 
+Check the [WIKI](https://github.com/spatulox-discord/DiscordInteractionManager/wiki/) !
+
 Are you always fed up with creating interactions by hand or developing your own tools to deploy, update, or delete a slash command or a context menu ?
 Same thing when listing interactions, because it’s a mess with specific guild interactions and global interaction ? You never know which one is where or which permission it have ? This tool is made for you !
 Discord Interaction Manager is a lightweight CLI tool to manage Discord bot interactions (slash commands, context menus) in under 10 seconds. Generate, deploy, list, update, delete, your interactions with an interactive terminal interface.
