@@ -1,21 +1,45 @@
 # Changelog
 Date format : dd/mm/yyyy
 
-### Unreleased
+### 24/09/2026 - 2.3.0
+- Add :
+    - Deleting interactions asks for a confirmation that names them
+    - A warning when two local files define the same interaction in the same scope (Discord keeps only one, and both files would get the same ID)
+    - The All guilds menu shows how many guilds are fetched, for bots in many guilds
+    - A GitHub Actions CI running the type check, the tests and the build, then starting the built CLI on Node 18, 20, 22 and 24
+    - `devEngines` : npm warns contributors on a Node older than 21, needed by `npm test`
+- Change :
+    - `engines` : Node `>=18.17` (was `>=18`), required by `undici`, used by `@discordjs/rest` to send the requests
+    - An invalid selection of interactions asks again instead of cancelling the action, and leaving it empty cancels it
+    - Local files are written to a temporary file first, so a crash or a full disk can no longer leave a truncated file and lose its IDs
+    - Local files are also checked for the structure of `options` (type, name, description, with the path of the invalid option), `contexts`, `integration_types` and `nsfw`, instead of failing on Discord
+    - Every yes / no prompt shows `(y/n)` in the same way (some had no hint or no space before the answer)
+    - The name column of the tables is called "Name" (it was "Nom")
+    - The generators trim the descriptions and choice names, and ask again when they are blank (e.g. only spaces)
+    - The generator refuses choices with a name or a value already used, or outside the limits of their option (`min_value` / `max_value`, `min_length` / `max_length`)
+    - Typing `exit` quits the CLI from any menu (it only went back to the previous menu), and the menu prompt mentions it
+- Fix :
+    - A local file with an invalid `default_member_permissions` (e.g. `"abc"`) emptied the whole listing : the file is now reported and skipped
+    - Interactions saved from Discord with a permission unknown to `discord-api-types` (added recently by Discord) lost it once updated, and could become usable by everyone : their permission names are no longer saved, only the bitfield. The details show these permissions as `Unknown (<bit>)`
+    - An unknown permission name in `default_member_permissions_string` (e.g. a typo) was skipped with a warning, restricting the interaction to administrators when it was the only one, and names such as `constructor` crashed : the file is now reported
+    - A context menu file in `commands/` (or a slash command in `context_menu/`) was deployed by the wrong manager, which then never listed it from Discord nor cleaned its ID once deleted : such a file is now reported and skipped
+    - Deleting an interaction read the `example*` files while cleaning the local IDs, and reported the invalid ones
+    - The generators accepted a file name starting with `example`, so the generated file was silently ignored
+    - The details showed an empty ID instead of "not deployed" for the `"id": ""` of older generators
+
+### 24/09/2026 - 2.1.0
+2.1.0 was never published on npm, 2.2.0 is the same version
 - Add :
     - Tests with `node:test` + `tsx` (`npm test`), and a `prepublishOnly` script running the type check, the tests and the build before each publish
     - Autocomplete can be enabled on `INTEGER` and `NUMBER` options, not only on `STRING` ones. As for strings, choices are skipped when autocomplete is on
     - `NUMBER` options can have choices
-    - `engines` : Node `>=18.17`, required by `undici` (used by `@discordjs/rest`)
+    - `engines` : Node `>=18`, required by `@discordjs/rest`
     - The optional variables (`DISCORD_INTERACTION_FOLDER`, `DISCORD_BOT_DEV`) are documented in `.env.example`
     - Stage channels (`13`) can be chosen in the channel types of a `CHANNEL` option
     - After a listing, the numbers of the table show the details of the interactions : scope and IDs, permissions, contexts, integration types, NSFW, localizations, local file, and the options as a tree (types, required, limits, autocomplete, channel types, choices). "List all available" in the Guild menu now prints one table (the GuildID column tells global interactions apart)
     - An "All guilds" menu next to Global and Guild : lists each guild interaction with the number of guilds it is deployed in (from Discord, with its local file and details), counts interactions per guild, updates guild interactions in all their guilds and deletes them from every guild (even without local file)
     - Local files are checked when read : guild IDs (keys of `id`) and interaction IDs must be Discord IDs, so a mistyped ID is reported with the file name instead of failing on Discord. The empty global `"id": ""` written by older generators is still accepted
     - "Add a guild ... to this guild" in the Guild menu : deploys a guild interaction to a guild it does not target yet, and adds the guild with its new ID to the local file
-    - Deleting interactions asks for a confirmation that names them
-    - A warning when two local files define the same interaction in the same scope (Discord keeps only one, and both files would get the same ID)
-    - The All guilds menu shows how many guilds are fetched, for bots in many guilds
 - Change :
     - `DISCORD_BOT_CLIENTID` is no longer needed : the application ID is fetched from Discord with the token (`GET /applications/@me`)
     - `discord.js` is no longer needed : the CLI only depends on `@discordjs/rest` and `discord-api-types`, now declared as dependencies (they were only installed through `discord.js`, which broke with pnpm / Yarn PnP)
@@ -35,14 +59,6 @@ Date format : dd/mm/yyyy
     - The CLI class hierarchy is simplified (`Prompt` helper, `GuildListManager` becomes `GuildSelector`)
     - The Command and ContextMenu managers start with a Global / Guild choice. Global only handles global interactions (deploying no longer deploys guild files, updating no longer updates every guild). Guild asks for the guild once and every action only applies to it. The separate List menu and the "y=global/n=specific" questions are gone, guild interactions saved from Discord go to `generated_<folder>/<guildId>/`, and "Count per guild" is in the All guilds menu
     - The generators list the guilds of the bot for a guild interaction and take their numbers (raw guild IDs were asked). Leaving it empty keeps a guild interaction with no guild yet, to add later from the Guild menu, instead of turning it into a global one
-    - An invalid selection of interactions asks again instead of cancelling the action, and leaving it empty cancels it
-    - Local files are written to a temporary file first, so a crash or a full disk can no longer leave a truncated file and lose its IDs
-    - Local files are also checked for the structure of `options` (type, name, description, with the path of the invalid option), `contexts`, `integration_types` and `nsfw`, instead of failing on Discord
-    - Every yes / no prompt shows `(y/n)` in the same way (some had no hint or no space before the answer)
-    - The name column of the tables is called "Name" (it was "Nom")
-    - The generators trim the descriptions and choice names, and ask again when they are blank (e.g. only spaces)
-    - The generator refuses choices with a name or a value already used, or outside the limits of their option (`min_value` / `max_value`, `min_length` / `max_length`)
-    - Typing `exit` quits the CLI from any menu (it only went back to the previous menu), and the menu prompt mentions it
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator
@@ -65,13 +81,6 @@ Date format : dd/mm/yyyy
     - Guild commands deployed nowhere were listed as deployed (with an empty ID)
     - Messages : "deleted for undefined" for global commands, one header per guild when counting, the scope instead of the guild ID in guild listing errors, the step numbering of the slash command generator, the message shown at 25 choices, the out of range permission index was accepted
     - dotenv no longer prints its advertising tip on every run
-    - A local file with an invalid `default_member_permissions` (e.g. `"abc"`) emptied the whole listing : the file is now reported and skipped
-    - Interactions saved from Discord with a permission unknown to `discord-api-types` (added recently by Discord) lost it once updated, and could become usable by everyone : their permission names are no longer saved, only the bitfield. The details show these permissions as `Unknown (<bit>)`
-    - An unknown permission name in `default_member_permissions_string` (e.g. a typo) was skipped with a warning, restricting the interaction to administrators when it was the only one, and names such as `constructor` crashed : the file is now reported
-    - A context menu file in `commands/` (or a slash command in `context_menu/`) was deployed by the wrong manager, which then never listed it from Discord nor cleaned its ID once deleted : such a file is now reported and skipped
-    - Deleting an interaction read the `example*` files while cleaning the local IDs, and reported the invalid ones
-    - The generators accepted a file name starting with `example`, so the generated file was silently ignored
-    - The details showed an empty ID instead of "not deployed" for the `"id": ""` of older generators
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 
