@@ -95,3 +95,11 @@ describe("SlashCommandGeneratorCLI options rules", () => {
         }]);
     });
 });
+
+describe("BaseCLI.yesNoInput", () => {
+    it("ignores case and surrounding spaces", async () => {
+        assert.equal(await scripted(["Y"]).yesNoInput("?"), true);
+        assert.equal(await scripted([" YES "]).yesNoInput("?"), true);
+        assert.equal(await scripted(["No"]).yesNoInput("?"), false);
+    });
+});

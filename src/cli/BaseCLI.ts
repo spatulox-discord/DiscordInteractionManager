@@ -98,12 +98,12 @@ export abstract class BaseCLI {
 
     protected async yesNoInput(message: string): Promise<boolean> {
         while (true) {
-            const value = (await this.prompt(message));
+            const value = (await this.prompt(message)).trim().toLowerCase();
             if (!value) {
                 console.log("⚠️  This field is required. Please enter a value.");
                 continue;
             }
-            if (!["y", "n", "yes", "no"].includes(value.toLowerCase())) {
+            if (!["y", "n", "yes", "no"].includes(value)) {
                 console.log("⚠️  Invalid input. Try again.");
                 continue;
             }
