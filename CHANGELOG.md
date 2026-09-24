@@ -55,6 +55,7 @@ Date format : dd/mm/yyyy
     - Messages : "deleted for undefined" for global commands, one header per guild when counting, the scope instead of the guild ID in guild listing errors, the step numbering of the slash command generator, the message shown at 25 choices, the out of range permission index was accepted
     - dotenv no longer prints its advertising tip on every run
     - A local file with an invalid `default_member_permissions` (e.g. `"abc"`) emptied the whole listing : the file is now reported and skipped
+    - Interactions saved from Discord with a permission unknown to `discord-api-types` (added recently by Discord) lost it once updated, and could become usable by everyone : their permission names are no longer saved, only the bitfield. The details show these permissions as `Unknown (<bit>)`
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 

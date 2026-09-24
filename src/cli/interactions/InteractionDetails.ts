@@ -44,7 +44,11 @@ export class InteractionDetails {
     // Empty when everyone can use the interaction
     static permissionsLabel(cmd: Interaction): string {
         const permissions = InteractionPayload.resolvePermissions(cmd);
-        return permissions === "0" ? "Administrators only" : Utils.bitfieldToPermissions(permissions).join(", ");
+        if (permissions === "0") return "Administrators only";
+
+        const names = Utils.bitfieldToPermissions(permissions);
+        const unknown = Utils.unknownPermissionBits(permissions);
+        return (unknown ? [...names, `Unknown (${unknown})`] : names).join(", ");
     }
 
     private static scopeLabel(cmd: Interaction): string {

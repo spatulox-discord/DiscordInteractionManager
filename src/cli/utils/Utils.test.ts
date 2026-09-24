@@ -27,6 +27,19 @@ describe("Utils.bitfieldToPermissions", () => {
     });
 });
 
+describe("Utils.unknownPermissionBits", () => {
+    it("returns the bits without a permission name", () => {
+        const unknownBit = 1n << 62n;
+        assert.equal(Utils.unknownPermissionBits((PermissionFlagsBits.BanMembers | unknownBit).toString()), unknownBit);
+    });
+
+    it("returns 0n when every bit is known", () => {
+        for (const bitfield of [null, undefined, "0", 0, PermissionFlagsBits.BanMembers.toString()]) {
+            assert.equal(Utils.unknownPermissionBits(bitfield), 0n, String(bitfield));
+        }
+    });
+});
+
 describe("Utils.permissionEntries", () => {
     it("lists each permission once, under its current name", () => {
         const names = Utils.permissionEntries().map(([name]) => name);

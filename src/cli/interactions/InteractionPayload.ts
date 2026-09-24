@@ -55,9 +55,14 @@ export class InteractionPayload {
             ? {command_scope: 'guild', id: {[raw.guild_id]: raw.id}}
             : {command_scope: 'global', id: raw.id};
 
+        // Names would drop the unknown bits, and they win over the bitfield: only keep the bitfield then
+        const names = Utils.unknownPermissionBits(raw.default_member_permissions) === 0n
+            ? {default_member_permissions_string: Utils.bitfieldToPermissions(raw.default_member_permissions)}
+            : {};
+
         return {
             ...this.pickDiscordFields(raw as unknown as Record<string, unknown>),
-            default_member_permissions_string: Utils.bitfieldToPermissions(raw.default_member_permissions),
+            ...names,
             ...scope,
         } as unknown as Interaction;
     }

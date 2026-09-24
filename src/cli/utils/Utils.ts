@@ -52,4 +52,14 @@ export class Utils {
 
         return result;
     }
+
+    /**
+     * Bits without a permission name, e.g. a permission added by Discord after this version of discord-api-types.
+     * @returns 0n when every bit has a name
+     */
+    static unknownPermissionBits(bitfield: string | number | null | bigint | undefined): bigint {
+        if (!bitfield) return 0n;
+        const known = this.permissionEntries().reduce((bits, [, value]) => bits | value, 0n);
+        return BigInt(bitfield) & ~known;
+    }
 }

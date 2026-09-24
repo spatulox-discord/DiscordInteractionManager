@@ -52,6 +52,13 @@ describe("InteractionDetails.format", () => {
         ]);
     });
 
+    it("shows the permissions unknown to discord-api-types", () => {
+        const bitfield = ((1n << 62n) | 4n).toString();
+        const cmd = {name: "Report", type: 3, command_scope: "global", default_member_permissions: bitfield} as unknown as Interaction;
+
+        assert.equal(InteractionDetails.format(cmd)[1], `Permissions  : BanMembers, Unknown (${1n << 62n})`);
+    });
+
     it("says when a slash command has no option and everyone can use it", () => {
         const lines = InteractionDetails.format({name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"} as unknown as Interaction);
 
