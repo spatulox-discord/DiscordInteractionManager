@@ -97,7 +97,8 @@ export abstract class BaseInteractionManager {
                             }
                         }
 
-                        cmd.id = Object.keys(newGuildIds).length > 0 ? newGuildIds : {};
+                        if (Object.keys(newGuildIds).length === 0) continue; // Not deployed in any guild
+                        cmd.id = newGuildIds;
                     }
 
                 }

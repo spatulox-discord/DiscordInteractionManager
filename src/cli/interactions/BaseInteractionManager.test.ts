@@ -126,6 +126,18 @@ describe("BaseInteractionManager.listFromFile", () => {
         assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
     });
 
+    it("does not list guild commands deployed nowhere as deployed", async () => {
+        await writeCommand("pending.json", {name: "pending", type: 1, description: "d", command_scope: "guild", id: {"111": null}});
+        await writeCommand("here.json", {name: "here", type: 1, description: "d", command_scope: "guild", id: {"111": "c2", "222": null}});
+        const {manager} = createManager();
+        mock.method(console, "log", () => {});
+        mock.method(console, "table", () => {});
+
+        const commands = await manager.listFromFile(Listing.DEPLOYED);
+
+        assert.deepEqual(commands.map(c => [c.name, c.id]), [["here", {"111": "c2"}]]);
+    });
+
     it("only skips files whose name starts with example", async () => {
         await writeCommand("example_v2.json", {name: "example", type: 1, description: "d", command_scope: "global"});
         await writeCommand("counterexample.json", {name: "counterexample", type: 1, description: "d", command_scope: "global"});
