@@ -90,18 +90,7 @@ export class FileManager {
         }
 
         try {
-            // Create directory structure recursively
-            const directories = directoryPath.split(path.sep).filter(Boolean);
-            let currentPath = '';
-
-            for (const dir of directories) {
-                currentPath = path.join(currentPath, dir);
-                try {
-                    await fs.access(currentPath);
-                } catch {
-                    await fs.mkdir(currentPath, { recursive: true });
-                }
-            }
+            await fs.mkdir(directoryPath, { recursive: true });
 
             if (!filename || filename.trim() === '') {
                 Log.error('Cannot write JSON file: empty filename');
