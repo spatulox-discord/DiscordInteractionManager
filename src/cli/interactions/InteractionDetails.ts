@@ -52,7 +52,7 @@ export class InteractionDetails {
     }
 
     private static scopeLabel(cmd: Interaction): string {
-        if (cmd.command_scope === "global") return `global, ID ${cmd.id ?? "not deployed"}`;
+        if (cmd.command_scope === "global") return `global, ID ${cmd.id || "not deployed"}`; // "" was written by older generators
         const ids = Object.entries(cmd.id).map(([guildId, id]) => `${guildId} → ${id ?? "not deployed"}`);
         return `guild, ${ids.join(", ") || "no guild"}`;
     }

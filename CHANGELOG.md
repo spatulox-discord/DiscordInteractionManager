@@ -65,6 +65,7 @@ Date format : dd/mm/yyyy
     - A context menu file in `commands/` (or a slash command in `context_menu/`) was deployed by the wrong manager, which then never listed it from Discord nor cleaned its ID once deleted : such a file is now reported and skipped
     - Deleting an interaction read the `example*` files while cleaning the local IDs, and reported the invalid ones
     - The generators accepted a file name starting with `example`, so the generated file was silently ignored
+    - The details showed an empty ID instead of "not deployed" for the `"id": ""` of older generators
 - Remove :
     - Unused regexes (some of them were wrong) and the duplicated `DiscordCommandType` enum
 

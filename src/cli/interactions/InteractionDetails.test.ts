@@ -59,6 +59,11 @@ describe("InteractionDetails.format", () => {
         assert.equal(InteractionDetails.format(cmd)[1], `Permissions  : BanMembers, Unknown (${1n << 62n})`);
     });
 
+    it("shows the empty ID of older generators as not deployed", () => {
+        const cmd = {name: "Report", type: 3, command_scope: "global", id: ""} as unknown as Interaction;
+        assert.equal(InteractionDetails.format(cmd)[0], "Report   (Message Context Menu, global, ID not deployed)");
+    });
+
     it("says when a slash command has no option and everyone can use it", () => {
         const lines = InteractionDetails.format({name: "ping", type: 1, description: "Ping", command_scope: "global", id: "c1"} as unknown as Interaction);
 
