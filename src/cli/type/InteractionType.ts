@@ -17,12 +17,6 @@ export enum InteractionContextType {
     GROUP_DM
 }
 
-export enum DiscordCommandType {
-    CHANT_INPUT = 1,
-    USER,
-    MESSAGE
-}
-
 export enum DiscordOptionType {
     SUB_COMMAND = 1,
     SUB_COMMAND_GROUP,
@@ -50,7 +44,6 @@ export enum ChannelType { // DM and GroupDM are missing for a reason
 }
 
 export type PermissionString = keyof typeof PermissionFlagsBits | string;
-
 
 export interface Choice {
     name: string;
@@ -98,17 +91,6 @@ export interface OnlineContextMenuConfig extends OnlineInteractionConfigBase {
 
 export type OnlineInteractionConfig = OnlineCommandConfig | OnlineContextMenuConfig;
 
-
-
-
-
-
-
-
-
-
-
-
 export interface BaseInteractionConfig {
     name: string;
     type: CommandType;
@@ -141,7 +123,6 @@ export interface SlashSpecificGuildCommand extends SlashLocalCommand, SpecificGu
 export interface SlashGlobalGuildCommand extends SlashLocalCommand, GlobalGuildInteraction {}
 export type SlashCommand = SlashSpecificGuildCommand | SlashGlobalGuildCommand;
 export interface SlashCommandConfigGenerator extends Omit<SlashCommand, ""> {}
-
 
 export interface ContextMenuLocalCommand extends BaseInteractionConfig {
     type: CommandType.USER_CONTEXT_MENU | CommandType.MESSAGE_CONTEXT_MENU;
