@@ -18,6 +18,33 @@ describe("FileManager.writeJsonFile", () => {
     });
 });
 
+describe("FileManager.writeFileAtomic", () => {
+    it("replaces the file without leaving a temporary file", async () => {
+        const root = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
+        try {
+            const file = path.join(root, "ping.json");
+            await fs.writeFile(file, "old");
+            await FileManager.writeFileAtomic(file, "new");
+            assert.equal(await fs.readFile(file, "utf8"), "new");
+            assert.deepEqual(await fs.readdir(root), ["ping.json"]);
+        } finally {
+            await fs.rm(root, {recursive: true, force: true});
+        }
+    });
+
+    it("removes the temporary file when the write fails", async () => {
+        const root = await fs.mkdtemp(path.join(os.tmpdir(), "dim-test-"));
+        try {
+            // A folder cannot be replaced by a file
+            await fs.mkdir(path.join(root, "ping.json"));
+            await assert.rejects(FileManager.writeFileAtomic(path.join(root, "ping.json"), "new"));
+            assert.deepEqual(await fs.readdir(root), ["ping.json"]);
+        } finally {
+            await fs.rm(root, {recursive: true, force: true});
+        }
+    });
+});
+
 describe("FileManager.fileExists", () => {
     it("tells whether a file exists without logging an error", async (t) => {
         const error = t.mock.method(console, "error", () => {});

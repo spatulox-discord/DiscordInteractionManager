@@ -1,6 +1,5 @@
 import {REST} from '@discordjs/rest';
 import {RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult, Routes} from 'discord-api-types/v10';
-import * as fs from 'fs/promises';
 import {Log} from "../../utils/Log";
 import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
@@ -521,7 +520,7 @@ export abstract class BaseInteractionManager {
     private async saveInteraction(fileName: string, cmd: Interaction): Promise<void> {
         delete cmd.filename
         const filePath = PathUtils.createPathFile(this.folderPath, fileName);
-        await fs.writeFile(filePath, JSON.stringify(cmd, null, 2));
+        await FileManager.writeFileAtomic(filePath, JSON.stringify(cmd, null, 2));
     }
 
     private async removeLocalIdFromFile(idListToDelete: string[]): Promise<void> {

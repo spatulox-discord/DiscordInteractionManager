@@ -46,6 +46,21 @@ export class FileManager {
     }
 
     /**
+     * Writes to a temporary file first, so a crash or a full disk never leaves a truncated file (and its IDs lost).
+     * The temporary file does not end with .json, so it is never listed.
+     */
+    static async writeFileAtomic(filePath: string, content: string): Promise<void> {
+        const tmpPath = `${filePath}.${process.pid}.tmp`;
+        try {
+            await fs.writeFile(tmpPath, content);
+            await fs.rename(tmpPath, filePath);
+        } catch (error) {
+            await fs.rm(tmpPath, {force: true});
+            throw error;
+        }
+    }
+
+    /**
      * Lists all JSON files in a directory.
      * @param directoryPath Path to scan for JSON files
      * @returns Array of JSON filenames or false on error
@@ -90,7 +105,7 @@ export class FileManager {
             const filePath = path.join(directoryPath, `${cleanFilename}.json`);
             const jsonContent = JSON.stringify(data, null, 2);
 
-            await fs.writeFile(filePath, jsonContent);
+            await this.writeFileAtomic(filePath, jsonContent);
             Log.info(`Successfully wrote data to ${filePath}`);
             return true;
 
