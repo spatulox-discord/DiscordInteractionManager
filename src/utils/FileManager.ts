@@ -2,6 +2,10 @@ import path from 'path';
 import fs from 'fs/promises';
 import {Log} from "./Log";
 
+// Characters and device names (even with an extension, e.g. "aux.json") that Windows refuses in a filename
+const FORBIDDEN_CHARACTERS = /[\\/:*?"<>|\x00-\x1f]/g;
+const RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i;
+
 export class FileManager {
     /**
      * Reads and parses a JSON file, logging the error on failure.
@@ -23,16 +27,18 @@ export class FileManager {
         return /^example/i.test(filename.trim());
     }
 
+    // Stays in its folder, and can be written on every OS
     static isSafeFilename(filename: string): boolean {
         const name = filename.trim();
-        return name !== '' && name !== '.' && name !== '..' && !/[\\/]/.test(name);
+        return name !== '' && name !== '.' && name !== '..' && !name.match(FORBIDDEN_CHARACTERS) && !RESERVED_NAME.test(name);
     }
 
     /**
-     * Turns any text (e.g. an interaction name) into a filename that stays in its folder.
+     * Turns any text (e.g. an interaction name) into a filename that stays in its folder and can be written on every OS.
      */
     static toSafeFilename(name: string): string {
-        const safe = name.trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, '_');
+        let safe = name.trim().replace(FORBIDDEN_CHARACTERS, '_');
+        if (RESERVED_NAME.test(safe)) safe = `_${safe}`;
         return this.isSafeFilename(safe) ? safe : '_';
     }
 
