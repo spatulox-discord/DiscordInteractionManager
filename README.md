@@ -92,6 +92,7 @@ Choose an option:
 | List all available (global + guild) | | ✅ |
 | List local files | ✅ | ✅ (files targeting the guild) |
 | Deploy local | ✅ | ✅ (only to the chosen guild) |
+| Add a guild interaction to the guild | | ✅ (guild files that do not target the guild yet) |
 | Update | ✅ | ✅ (only in the chosen guild) |
 | Delete | ✅ | ✅ (only from the chosen guild) |
 | Save deployed interactions into files | ✅ `generated_<folder>/` | ✅ `generated_<folder>/<guildId>/` |
@@ -104,6 +105,8 @@ Choose an option:
 > - The scope** of the interaction is determined while generating the file
 
 > - A guild interaction file can target several guilds (`"id": {"guildA": null, "guildB": null}`) : deploy it from the Guild menu of each guild. The other guilds stay pending (`null`) in the file
+
+> - To publish an already deployed guild interaction in another guild, open the Guild menu of that guild and use "Add a guild ... to this guild" : the guild is added to the file with its new ID, no need to edit the file by hand
 
 ## Update an interaction
 > - You can update any interaction, by updating the generated file inside the "**./handlers**" folder*

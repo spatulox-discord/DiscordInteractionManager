@@ -98,6 +98,29 @@ describe("BaseInteractionManager.deploy", () => {
         assert.deepEqual((await readCommand("ping.json")).id, {"111": "c1", "222": "c2", "333": null});
     });
 
+    it("adds a guild to a guild command", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1"}});
+        await writeCommand("here.json", {name: "here", type: 1, description: "Here", command_scope: "guild", id: {"222": "c3"}});
+        await writeCommand("global.json", {name: "global", type: 1, description: "Global", command_scope: "global"});
+        const {manager, calls} = createManager(() => ({id: "c2"}));
+
+        const addable = await manager.listFromFile(Listing.ADDABLE, "222");
+        await manager.deploy(addable);
+
+        assert.deepEqual(addable.map(c => c.name), ["ping"]);
+        assert.deepEqual(calls.map(c => `${c.method} ${c.route}`), ["post /applications/123456789012345678/guilds/222/commands"]);
+        assert.deepEqual((await readCommand("ping.json")).id, {"111": "c1", "222": "c2"});
+    });
+
+    it("does not add the guild when Discord refuses the deployment", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"111": "c1"}});
+        const {manager} = createManager(() => { throw new Error("Missing Access"); });
+
+        await manager.deploy(await manager.listFromFile(Listing.ADDABLE, "222"));
+
+        assert.deepEqual((await readCommand("ping.json")).id, {"111": "c1"});
+    });
+
     it("keeps the guild pending when Discord refuses the deployment", async () => {
         await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {"333": null}});
         const {manager} = createManager(() => { throw new Error("Missing Access"); });

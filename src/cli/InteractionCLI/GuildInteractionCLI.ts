@@ -19,6 +19,7 @@ export class GuildInteractionCLI extends ScopeInteractionCLI {
         { label: `List all ${this.manager.folderPath} available in this guild (global + guild)`, action: () => this.listAvailable() },
         { label: `List local ${this.manager.folderPath} files for this guild`, action: () => this.manager.listFromFile(Listing.ALL, this.guild.id) },
         { label: "Deploy local to this guild", action: () => this.handleDeploy(this.guild) },
+        { label: `Add a guild ${this.manager.folderPath} to this guild`, action: () => this.handleAdd() },
         { label: "Update in this guild", action: () => this.handleUpdate(this.guild) },
         { label: "Delete from this guild", action: () => this.handleDelete(this.guild) },
         { label: `Save this guild's ${this.manager.folderPath} into local files`, action: async () => this.saveToLocalFiles(await this.manager.listGuild(this.guild.id), this.guild.id) },
@@ -26,6 +27,13 @@ export class GuildInteractionCLI extends ScopeInteractionCLI {
         { label: "Change guild", action: () => this.changeGuild() },
         { label: 'Back', action: () => this.goBack() },
     ];
+
+    // Deploys guild files that do not target this guild yet, and adds the guild to them
+    private async handleAdd(): Promise<void> {
+        const selected = await this.selectCommands(await this.manager.listFromFile(Listing.ADDABLE, this.guild.id));
+        if (selected.length === 0) return;
+        await this.manager.deploy(selected);
+    }
 
     private async listAvailable(): Promise<void> {
         const globalCommands = await this.manager.list(false)

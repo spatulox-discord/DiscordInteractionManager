@@ -85,7 +85,7 @@ export abstract class BaseCLI {
         console.log('  🔄 Update  → Update Discord interactions based on local JSON files');
         console.log('  🗑️ Delete  → Remove Discord interactions and their ID from local JSON files');
         console.log('  💾 Save    → Save deployed interactions into generated_* JSON files');
-        console.log('  The Guild menu can also list everything available in the guild and count interactions per guild');
+        console.log('  The Guild menu can also add a guild interaction to the guild, list everything available in the guild and count interactions per guild');
 
         console.log('');
         console.log('🎮 Selection:');

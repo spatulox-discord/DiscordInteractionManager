@@ -127,6 +127,12 @@ export abstract class BaseInteractionManager {
                         );
                     }
                 }
+                // === LISTING.ADDABLE === Guild files not deployed in this guild yet
+                if (list === Listing.ADDABLE) {
+                    if (!guildID || cmd.command_scope !== "guild" || cmd.id[guildID]) continue;
+                    cmd.id = {[guildID]: null}; // Deploy only there, the file keeps its other guilds
+                }
+
                 if (guildID && (cmd.command_scope !== "guild" || !(guildID in cmd.id))) continue;
 
                 const commandWithIndex = {
