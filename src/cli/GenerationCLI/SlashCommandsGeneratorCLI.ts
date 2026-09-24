@@ -236,7 +236,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             true
         );
 
-        if (!input.trim() || input.trim() == 'all') return undefined;
+        if (!input.trim() || input.trim().toLowerCase() === 'all') return undefined;
 
         return input.split(',').map(i => parseInt(i.trim()));
     }

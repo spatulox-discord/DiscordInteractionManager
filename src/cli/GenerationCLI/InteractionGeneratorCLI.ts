@@ -93,7 +93,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             `Enter context indices (${contextChoices}) separated by commas: `,
             (val) => {
                 if (!val) return false;
-                if (val == "all") return true;
+                if (val.trim().toLowerCase() === "all") return true;
                 const nums = val
                     .split(',')
                     .map(v => parseInt(v.trim(), 10))
@@ -105,7 +105,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             }
         );
 
-        if (input.toLowerCase() === 'all') {
+        if (input.trim().toLowerCase() === 'all') {
             return enumValues;
         }
 
@@ -134,7 +134,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             `Enter integration context indices (${contextChoices}) separated by commas: `,
             (val) => {
                 if (!val) return false;
-                if (val == "all") return true;
+                if (val.trim().toLowerCase() === "all") return true;
                 const nums = val
                     .split(',')
                     .map(v => parseInt(v.trim(), 10))
@@ -146,7 +146,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
             }
         );
 
-        if (input.toLowerCase() === 'all') {
+        if (input.trim().toLowerCase() === 'all') {
             return enumValues;
         }
 
