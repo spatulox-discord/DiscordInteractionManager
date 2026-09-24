@@ -78,21 +78,32 @@ Choose an option:
 
 > - When generating files with the cli, you should be able to see generated files in the "**./handlers**"*
 
+## Manage interactions
+"Manage Interactions" → "Command Manager" or "ContextMenu Manager" lets you pick a scope**:
+```
+1. Global        ← global interactions only
+2. Guild         ← asks for a guild once, then every action only applies to that guild
+3. Back
+```
+
+| Action | Global | Guild |
+|---|---|---|
+| List deployed | ✅ | ✅ (interactions specific to the guild) |
+| List all available (global + guild) | | ✅ |
+| List local files | ✅ | ✅ (files targeting the guild) |
+| Deploy local | ✅ | ✅ (only to the chosen guild) |
+| Update | ✅ | ✅ (only in the chosen guild) |
+| Delete | ✅ | ✅ (only from the chosen guild) |
+| Save deployed interactions into files | ✅ `generated_<folder>/` | ✅ `generated_<folder>/<guildId>/` |
+| Count interactions per guild | | ✅ |
+| Change guild | | ✅ |
+
 ## Deploy an interaction
 > - Once you have deployed an interaction, you can update/delete it using the cli
 
 > - The scope** of the interaction is determined while generating the file
 
-## List interactions
-> - List global interaction 
-
-> - List spcific interaction for a guild
- 
-> - List all interactions (global and specific for a guild
-  
-> - Count the number of interaction by scope**
-
-> - Save global commands in json files
+> - A guild interaction file can target several guilds (`"id": {"guildA": null, "guildB": null}`) : deploy it from the Guild menu of each guild. The other guilds stay pending (`null`) in the file
 
 ## Update an interaction
 > - You can update any interaction, by updating the generated file inside the "**./handlers**" folder*

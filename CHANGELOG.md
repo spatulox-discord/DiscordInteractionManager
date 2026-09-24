@@ -25,6 +25,7 @@ Date format : dd/mm/yyyy
     - Each permission is listed once (deprecated aliases such as `ManageEmojisAndStickers` are hidden, but still accepted in local files)
     - Only `dist` is published on npm (`files` whitelist instead of `.npmignore`)
     - The CLI class hierarchy is simplified (`Prompt` helper, `GuildListManager` becomes `GuildSelector`)
+    - The Command and ContextMenu managers start with a Global / Guild choice. Global only handles global interactions (deploying no longer deploys guild files, updating no longer updates every guild). Guild asks for the guild once and every action only applies to it. The separate List menu and the "y=global/n=specific" questions are gone, and guild interactions saved from Discord go to `generated_<folder>/<guildId>/`
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - Context menus are never sent with a description or options (Discord rejects them)

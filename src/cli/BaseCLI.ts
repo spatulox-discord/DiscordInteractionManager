@@ -76,11 +76,16 @@ export abstract class BaseCLI {
         console.log('  Files whose name starts with "example" are ignored');
 
         console.log('');
-        console.log('🎯 Features:');
-        console.log('  📊 1. List Remote    → Show deployed commands on Discord');
-        console.log('  🚀 2. Deploy Local   → Deploy local JSON files → Discord');
-        console.log('  🔄 3. Update Remote  → Update Discord commands based on local JSON file');
-        console.log('  🗑️ 4. Delete Remote → Remove Discord commands based on local JSON file');
+        console.log('🎯 Features (Manage Interactions → Command / ContextMenu Manager):');
+        console.log('  🌍 Global → Global interactions only');
+        console.log('  🏠 Guild  → Choose a guild once, every action only applies to that guild');
+        console.log('  In both menus:');
+        console.log('  📊 List    → Show deployed interactions on Discord, or local JSON files');
+        console.log('  🚀 Deploy  → Deploy local JSON files → Discord');
+        console.log('  🔄 Update  → Update Discord interactions based on local JSON files');
+        console.log('  🗑️ Delete  → Remove Discord interactions and their ID from local JSON files');
+        console.log('  💾 Save    → Save deployed interactions into generated_* JSON files');
+        console.log('  The Guild menu can also list everything available in the guild and count interactions per guild');
 
         console.log('');
         console.log('🎮 Selection:');
