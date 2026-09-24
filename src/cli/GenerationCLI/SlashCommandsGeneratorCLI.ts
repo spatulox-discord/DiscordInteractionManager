@@ -37,10 +37,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             "Name (lowercase letters, digits, - _ ', 1-32 chars): ",
             SlashCommandGeneratorCLI.isValidName
         );
-        config.description = await this.input.requireInput(
-            "Description (1-100 chars): ",
-            val => val.length >= 1 && val.length <= 100
-        );
+        config.description = await this.requireText("Description (1-100 chars): ", 100);
         await this.nsfw(config)
 
         console.clear();
@@ -137,10 +134,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             "Option name (lowercase letters, digits, - _ ', 1-32, unique): ",
             val => SlashCommandGeneratorCLI.isValidName(val) && !usedNames.includes(val)
         );
-        const description = await this.input.requireInput(
-            "Description (1-100): ",
-            val => val.length >= 1 && val.length <= 100
-        );
+        const description = await this.requireText("Description (1-100): ", 100);
 
         const option: CommandOption = { type, name, description };
 
@@ -204,7 +198,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         const valueHint = type === DiscordOptionType.STRING ? "≤100 chars" : type === DiscordOptionType.INTEGER ? "integer" : "number";
         const choices: Choice[] = [];
         while (choices.length < 25) {
-            const name = await this.input.requireInput("Choice name (≤100): ", val => val.length <= 100);
+            const name = await this.requireText("Choice name (1-100): ", 100);
             const value = await this.input.requireInput(`Choice value (${valueHint}): `, val => SlashCommandGeneratorCLI.isValidChoiceValue(type, val));
             choices.push({ name, value: type === DiscordOptionType.STRING ? value : Number(value) });
 

@@ -60,6 +60,18 @@ describe("SlashCommandGeneratorCLI choices", () => {
     });
 });
 
+describe("InteractionGeneratorCLI.requireText", () => {
+    it("asks again for a blank or too long text and trims it", async () => {
+        const answers = ["   ", "a".repeat(101), "  Search the wiki  "];
+        assert.equal(await scripted(answers).requireText("Description: ", 100), "Search the wiki");
+        assert.deepEqual(answers, []);
+    });
+
+    it("counts the length without the surrounding spaces", async () => {
+        assert.equal(await scripted([` ${"a".repeat(100)} `]).requireText("Description: ", 100), "a".repeat(100));
+    });
+});
+
 describe("SlashCommandGeneratorCLI.optionalNumber", () => {
     it("asks again until the value is a valid number", async () => {
         const generator = scripted(["abc", "1.5", "-1", "7000", "12"]);

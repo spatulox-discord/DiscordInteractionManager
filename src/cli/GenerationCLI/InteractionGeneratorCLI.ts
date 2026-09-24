@@ -42,6 +42,17 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
         }
     }
 
+    /**
+     * Asks for a text of 1 to max characters, without its surrounding spaces (Discord would trim them or reject a blank text).
+     */
+    protected async requireText(message: string, max: number, isValid: (text: string) => boolean = () => true): Promise<string> {
+        const text = await this.input.requireInput(message, val => {
+            const trimmed = val.trim();
+            return trimmed.length >= 1 && trimmed.length <= max && isValid(trimmed);
+        });
+        return text.trim();
+    }
+
     protected async nsfw(config: SlashCommandConfigGenerator | ContextMenuConfigGenerator): Promise<void> {
         if(await this.input.yesNoInput("NSFW?")){
             config.nsfw = true

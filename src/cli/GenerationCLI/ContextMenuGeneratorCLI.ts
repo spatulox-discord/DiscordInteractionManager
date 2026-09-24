@@ -27,7 +27,7 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
         config.type = parseInt(await this.input.requireInput("Type (2 or 3): ", val => ["2", "3"].includes(val))) as 2 | 3;
 
         console.clear();
-        config.name = (await this.input.requireInput("Name (1-32 chars): ", val => val.trim().length >= 1 && val.trim().length <= 32)).trim();
+        config.name = await this.requireText("Name (1-32 chars): ", 32);
         await this.nsfw(config)
 
         // 2. Permissions

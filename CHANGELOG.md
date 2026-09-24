@@ -39,6 +39,7 @@ Date format : dd/mm/yyyy
     - Local files are also checked for the structure of `options` (type, name, description, with the path of the invalid option), `contexts`, `integration_types` and `nsfw`, instead of failing on Discord
     - Every yes / no prompt shows `(y/n)` in the same way (some had no hint or no space before the answer)
     - The name column of the tables is called "Name" (it was "Nom")
+    - The generators trim the descriptions and choice names, and ask again when they are blank (e.g. only spaces)
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator
