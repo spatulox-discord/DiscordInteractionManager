@@ -117,6 +117,12 @@ describe("WebServer API", () => {
         assert.equal(body.data.folders.commands, `${folder}/commands`);
     });
 
+    it("gives the bit of every permission name to the builder", async () => {
+        const {body} = await json("GET", "/api/meta");
+        assert.equal(body.data.permissionBits.BanMembers, "4");
+        assert.equal(body.data.permissionBits.Administrator, "8");
+    });
+
     it("returns the messages of the request, such as an invalid file", async () => {
         mock.method(console, "error", () => {});
         await writeCommand("broken.json", {name: "broken", type: 1});

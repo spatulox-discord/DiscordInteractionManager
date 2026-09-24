@@ -87,6 +87,17 @@ export class Builder {
         return "everyone";
     }
 
+    // Same as Utils.permissionsToBitfield, undefined for an unknown name (the server reports it)
+    bitfield(names) {
+        let bits = 0n;
+        for (const name of names) {
+            const bit = this.meta.permissionBits[name];
+            if (bit === undefined) return undefined;
+            bits |= BigInt(bit);
+        }
+        return bits.toString();
+    }
+
     // Where the original file is deployed: "global" or guild IDs
     deployed() {
         const cmd = this.original;
@@ -114,6 +125,8 @@ export class Builder {
                 if (!cmd.default_member_permissions_string?.length) {
                     delete cmd.default_member_permissions_string;
                     delete cmd.default_member_permissions;
+                } else {
+                    cmd.default_member_permissions = this.bitfield(cmd.default_member_permissions_string) ?? cmd.default_member_permissions;
                 }
                 break;
             // custom: the bitfield of the file is kept

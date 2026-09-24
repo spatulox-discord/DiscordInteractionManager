@@ -3,7 +3,7 @@ import {AddressInfo} from "node:net";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult} from "discord-api-types/v10";
+import {PermissionFlagsBits, RESTAPIPartialCurrentUserGuild, RESTGetCurrentApplicationResult} from "discord-api-types/v10";
 import {Env} from "../Env";
 import {Log} from "../utils/Log";
 import {FileManager} from "../utils/FileManager";
@@ -217,6 +217,8 @@ export class WebServer {
             .map(([name, value]) => ({name, value}));
         return {
             permissions: Utils.permissionEntries().map(([name]) => name),
+            // Every name, aliases included, so the builder computes the bitfield as the server does
+            permissionBits: Object.fromEntries(Object.entries(PermissionFlagsBits).map(([name, bit]) => [name, bit.toString()])),
             contexts: enumEntries(InteractionContextType),
             integrationTypes: enumEntries(InteractionIntegrationType),
             optionTypes: enumEntries(DiscordOptionType),
