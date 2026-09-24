@@ -40,7 +40,10 @@ export abstract class BaseInteractionManager {
                 Type: cmd.type === CommandType.SLASH ? 'Slash' :
                     cmd.type === CommandType.USER_CONTEXT_MENU ? 'User Context Menu' : 'Message Context Menu',
                 Description: 'description' in cmd ? cmd.description : 'N/A',
-                Permissions: Utils.bitfieldToPermissions(cmd.default_member_permissions).join(", "),
+                Permissions: (() => {
+                    const permissions = InteractionPayload.resolvePermissions(cmd);
+                    return permissions === "0" ? "Administrators only" : Utils.bitfieldToPermissions(permissions).join(", ");
+                })(),
                 ID: (() => {
                     if (!cmd.id) return 'N/A';
                     if (cmd.command_scope === "global") return cmd.id;
@@ -328,10 +331,8 @@ export abstract class BaseInteractionManager {
                 fileCmd = await this.readInteraction(filePath);
             }
 
-            if (cmd.default_member_permissions_string) {
-                cmd.default_member_permissions = Utils.permissionsToBitfield(cmd.default_member_permissions_string);
-            }
             const body = InteractionPayload.toDiscord(cmd);
+            this.syncPermissions(cmd, body);
 
             try {
                 // Case 1: Specific Guild
@@ -407,9 +408,7 @@ export abstract class BaseInteractionManager {
             ? Object.keys(cmd.id).filter(guildId => cmd.id![guildId] == null)
             : [];
         const dataToSend = InteractionPayload.toDiscord(cmd);
-        if (Array.isArray(cmd.default_member_permissions_string) && dataToSend.default_member_permissions !== undefined) {
-            cmd.default_member_permissions = dataToSend.default_member_permissions as string;
-        }
+        this.syncPermissions(cmd, dataToSend);
 
         // Guild deployment
         if (cmd.command_scope == "guild") {
@@ -468,6 +467,13 @@ export abstract class BaseInteractionManager {
             }
         }
         return false
+    }
+
+    // Keep the saved bitfield in line with the permission names that were sent
+    private syncPermissions(cmd: Interaction, payload: Record<string, unknown>): void {
+        if (Array.isArray(cmd.default_member_permissions_string)) {
+            cmd.default_member_permissions = payload.default_member_permissions as string | null;
+        }
     }
 
     private async readInteraction(filePath: string): Promise<Interaction | null> {

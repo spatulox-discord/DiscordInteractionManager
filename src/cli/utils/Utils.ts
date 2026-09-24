@@ -10,7 +10,7 @@ export class Utils {
         return [...namesByValue].map(([value, name]) => [name, value]);
     }
 
-    static permissionsToBitfield(perms: string[] | undefined): string | number | undefined {
+    static permissionsToBitfield(perms: string[] | undefined): string | undefined {
         if (!perms || perms.length === 0) return undefined;
         if(!Array.isArray(perms)){
             throw new Error("Invalid default_permission_string : not an array");
