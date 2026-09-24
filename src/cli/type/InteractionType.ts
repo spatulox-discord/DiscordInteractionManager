@@ -96,7 +96,7 @@ export interface BaseInteractionConfig {
     type: CommandType;
     default_member_permissions?: string | bigint | number | null;
     default_member_permissions_string?: PermissionString[];
-    dm_permission: boolean;
+    dm_permission?: boolean;
     integration_types?: InteractionIntegrationType[];
     contexts?: InteractionContextType[];
     nsfw?: boolean;
