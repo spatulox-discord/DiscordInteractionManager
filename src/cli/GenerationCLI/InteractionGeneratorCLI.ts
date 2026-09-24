@@ -39,7 +39,7 @@ export abstract class InteractionGeneratorCLI extends BaseCLI {
 
                 return val.split(',').every(numStr => {
                     const num = parseInt(numStr.trim());
-                    return num >= 0 && num <= permEntries.length && !isNaN(num);
+                    return num >= 0 && num < permEntries.length && !isNaN(num);
                 });
             },
             true
