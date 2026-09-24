@@ -23,6 +23,14 @@ export class FileManager {
         return name !== '' && name !== '.' && name !== '..' && !/[\\/]/.test(name);
     }
 
+    /**
+     * Turns any text (e.g. an interaction name) into a filename that stays in its folder.
+     */
+    static toSafeFilename(name: string): string {
+        const safe = name.trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, '_');
+        return this.isSafeFilename(safe) ? safe : '_';
+    }
+
     static async fileExists(filePath: string): Promise<boolean> {
         try {
             await fs.access(filePath);

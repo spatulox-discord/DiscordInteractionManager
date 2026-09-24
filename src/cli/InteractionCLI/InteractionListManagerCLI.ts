@@ -64,8 +64,13 @@ export class InteractionListManagerCLI extends BaseCLI {
 
     protected async getAndSaveToLocalFile(){
         const commands  = await this.manager.list()
+        const usedFilenames = new Set<string>();
         for (const cmd of commands) {
-            await FileManager.writeJsonFile(PathUtils.createPathFolder("generated_"+this.manager.folderPath), cmd.name, cmd)
+            // A user and a message context menu can share the same name
+            let filename = FileManager.toSafeFilename(cmd.name);
+            if (usedFilenames.has(filename.toLowerCase())) filename = `${filename}_${cmd.type}`;
+            usedFilenames.add(filename.toLowerCase());
+            await FileManager.writeJsonFile(PathUtils.createPathFolder("generated_"+this.manager.folderPath), filename, cmd)
         }
     }
 }

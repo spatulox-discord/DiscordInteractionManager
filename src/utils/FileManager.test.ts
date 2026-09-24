@@ -37,3 +37,12 @@ describe("FileManager.isSafeFilename", () => {
         }
     });
 });
+
+describe("FileManager.toSafeFilename", () => {
+    it("keeps the file in its folder", () => {
+        assert.equal(FileManager.toSafeFilename("Traduire l'Automaton"), "Traduire l'Automaton");
+        assert.equal(FileManager.toSafeFilename("Copy / Paste"), "Copy _ Paste");
+        assert.equal(FileManager.toSafeFilename('a:b*c?"d<e>f|g\\h'), "a_b_c__d_e_f_g_h");
+        assert.equal(FileManager.toSafeFilename(".."), "_");
+    });
+});
