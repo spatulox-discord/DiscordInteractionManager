@@ -121,6 +121,21 @@ describe("BaseInteractionManager.deploy", () => {
         assert.equal("filename" in saved, false);
     });
 
+    it("keeps the edits made to the file since the listing", async () => {
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "Here", command_scope: "guild", id: {[G1]: null}});
+        const {manager} = createManager(() => ({id: C1}));
+        const global = await manager.listFromFile(Listing.LOCAL);
+        const inGuild = await manager.listFromFile(Listing.LOCAL, G1);
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Edited", command_scope: "global"});
+        await writeCommand("here.json", {name: "here", type: 1, description: "Edited", command_scope: "guild", id: {[G1]: null, [G2]: null}});
+
+        await manager.deploy([...global, ...inGuild]);
+
+        assert.deepEqual(await readCommand("ping.json"), {name: "ping", type: 1, description: "Edited", command_scope: "global", id: C1});
+        assert.deepEqual(await readCommand("here.json"), {name: "here", type: 1, description: "Edited", command_scope: "guild", id: {[G1]: C1, [G2]: null}});
+    });
+
     it("only deploys to the requested guild and keeps the other ones", async () => {
         await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "guild", id: {[G1]: C1, [G2]: null, [G3]: null}});
         const {manager, calls} = createManager(() => ({id: C2}));
@@ -286,7 +301,21 @@ describe("BaseInteractionManager.update", () => {
         ], null);
 
         assert.deepEqual(calls.map(c => c.method), ["patch", "patch"]);
-        assert.equal((await readCommand("pong.json")).description, "New pong");
+        assert.equal((calls[1]!.body as any).description, "New pong");
+    });
+
+    it("keeps the edits made to the file since the listing", async () => {
+        const ban = {name: "ban", type: 1, description: "Ban", command_scope: "guild", id: {[G1]: C1}, default_member_permissions_string: ["BanMembers"]};
+        await writeCommand("ban.json", ban);
+        const {manager} = createManager();
+        const listed = await manager.listFromFile(Listing.DEPLOYED, G1);
+        await writeCommand("ban.json", {...ban, description: "Edited", default_member_permissions_string: ["KickMembers"]});
+
+        await manager.update(listed, guild(G1));
+
+        const saved = await readCommand("ban.json");
+        assert.equal(saved.description, "Edited");
+        assert.equal(saved.default_member_permissions, "2");
     });
 
     it("removes on Discord the options removed from the local file", async () => {

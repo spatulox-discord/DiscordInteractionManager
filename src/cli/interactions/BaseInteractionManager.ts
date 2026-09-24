@@ -383,16 +383,9 @@ export abstract class BaseInteractionManager {
                 continue;
             }
 
-            // Read the file itself, to keep the IDs of the guilds that are not updated
-            let fileCmd: Interaction | null = null;
-            if (cmd.filename) {
-                const filePath = PathUtils.createPathFile(this.folderPath, cmd.filename);
-                fileCmd = await this.readInteraction(filePath);
-            }
-
             try {
                 const body = InteractionPayload.toDiscordPatch(cmd, this.integrationTypes);
-                this.syncPermissions(cmd, body);
+                this.warnClearedBitfield(cmd, body);
 
                 // Case 1: Specific Guild
                 if (guild) {
@@ -436,6 +429,7 @@ export abstract class BaseInteractionManager {
                     }
                 }
 
+                const fileCmd = cmd.filename ? await this.readInteraction(PathUtils.createPathFile(this.folderPath, cmd.filename)) : null;
                 if (!cmd.filename || !fileCmd) {
                     Log.error(`${cmd.name}: Local file not found, the file was not updated`);
                     continue;
@@ -444,12 +438,7 @@ export abstract class BaseInteractionManager {
                     Log.error(`${cmd.name}: The scope differs from the local file, the file was not updated`);
                     continue;
                 }
-
-                const finalCmd: Interaction = cmd.command_scope === "global"
-                    ? {...fileCmd, ...cmd, command_scope: 'global', id: cmd.id}
-                    : {...fileCmd, ...cmd, command_scope: 'guild', id: {...(fileCmd.id as SpecificCommandId), ...cmd.id}};
-
-                await this.saveInteraction(cmd.filename, finalCmd);
+                await this.saveFile(cmd.filename, fileCmd);
 
             } catch (error) {
                 Log.error(`${cmd.name}: ${(error as Error).message}`);
@@ -489,29 +478,12 @@ export abstract class BaseInteractionManager {
             ? Object.keys(cmd.id).filter(guildId => cmd.id![guildId] == null)
             : [];
         const dataToSend = InteractionPayload.toDiscord(cmd);
-        this.syncPermissions(cmd, dataToSend);
+        this.warnClearedBitfield(cmd, dataToSend);
 
         // Guild deployment
         if (cmd.command_scope == "guild") {
             let nb = 0;
-            let newIds: SpecificCommandId = {};
-
-
-            const filePath = PathUtils.createPathFile(this.folderPath, file);
-            const fileCmd = await this.readInteraction(filePath);
-            if (!fileCmd) {
-                console.error("Error when reading the file");
-                return false;
-            }
-
-            if(fileCmd.command_scope !== cmd.command_scope){
-                console.error("For some reason, the scope of the command differ from the on read in the file...")
-                return false
-            }
-
-            if (fileCmd.id && fileCmd.command_scope == "guild") {
-                newIds = { ...fileCmd.id };
-            }
+            const newIds: SpecificCommandId = {};
 
             for (const guildId of deployToGuilds) {
                 try {
@@ -526,22 +498,27 @@ export abstract class BaseInteractionManager {
                 }
             }
 
-            const finalCmd: Interaction = {
-                ...fileCmd,           // Base
-                ...cmd,               // New Data
-                command_scope: "guild",
-                id: Object.keys(newIds).length > 0 ? newIds : {}
-            };
+            const fileCmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
+            if (fileCmd?.command_scope !== "guild") {
+                Log.error(`${cmd.name}: ${file} is missing or no longer a guild ${this.folderPath}: the new IDs were not saved ${JSON.stringify(newIds)}`);
+                return false;
+            }
 
-            await this.saveInteraction(file, finalCmd);
+            fileCmd.id = {...fileCmd.id, ...newIds};
+            await this.saveFile(file, fileCmd);
             return nb === 0;
         }
         else if(cmd.command_scope == "global") {
             // Global deployment
             try {
                 const resp = await this.rest.post(Routes.applicationCommands(this.clientId), { body: dataToSend }) as RESTPostAPIApplicationCommandsResult;
-                cmd.id = resp.id;
-                await this.saveInteraction(file, cmd);
+                const fileCmd = await this.readInteraction(PathUtils.createPathFile(this.folderPath, file));
+                if (fileCmd?.command_scope !== "global") {
+                    Log.error(`${cmd.name}: deployed with the ID ${resp.id}, but ${file} is missing or no longer global: the ID was not saved`);
+                    return false;
+                }
+                fileCmd.id = resp.id;
+                await this.saveFile(file, fileCmd);
                 return true
             } catch (error) {
                 console.error(`⚠️  Global: ${(error as Error).message}`);
@@ -550,15 +527,22 @@ export abstract class BaseInteractionManager {
         return false
     }
 
-    // Keep the saved bitfield in line with the permission names that were sent
-    private syncPermissions(cmd: Interaction, payload: Record<string, unknown>): void {
-        if (!Array.isArray(cmd.default_member_permissions_string)) return;
-
+    private warnClearedBitfield(cmd: Interaction, payload: Record<string, unknown>): void {
         const bitfield = cmd.default_member_permissions;
-        if (payload.default_member_permissions === null && bitfield !== undefined && bitfield !== null) {
+        if (Array.isArray(cmd.default_member_permissions_string) && payload.default_member_permissions === null && bitfield !== undefined && bitfield !== null) {
             Log.warn(`${cmd.name}: "default_member_permissions_string" is empty, so everyone can use it and "default_member_permissions" (${bitfield}) is cleared. Remove the empty list to use this bitfield`);
         }
-        cmd.default_member_permissions = payload.default_member_permissions as string | null;
+    }
+
+    /**
+     * Saves a file read again after the request, so the edits made to it since the listing are kept.
+     * Only the bitfield changes, to follow the permission names.
+     */
+    private async saveFile(file: string, fileCmd: Interaction): Promise<void> {
+        if (Array.isArray(fileCmd.default_member_permissions_string)) {
+            fileCmd.default_member_permissions = InteractionPayload.resolvePermissions(fileCmd);
+        }
+        await this.saveInteraction(file, fileCmd);
     }
 
     /**
