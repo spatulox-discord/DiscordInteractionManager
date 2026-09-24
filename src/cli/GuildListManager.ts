@@ -3,6 +3,8 @@ import {REST} from "@discordjs/rest";
 import { Routes } from 'discord-api-types/v10';
 import {Guild} from "discord.js";
 
+const GUILDS_PAGE_SIZE = 200;
+
 export class GuildListManager extends BaseCLI {
     protected guilds: Guild[] = [];
 
@@ -37,9 +39,7 @@ export class GuildListManager extends BaseCLI {
 
         try {
 
-            this.guilds = await this.rest.get(
-                Routes.userGuilds()
-            ) as Guild[]
+            this.guilds = await this.fetchAllGuilds();
 
             if(printResult){
                 console.table(this.guilds.map((g, _i) => ({
@@ -54,6 +54,22 @@ export class GuildListManager extends BaseCLI {
         } catch (error) {
             console.error(`Error when listing guilds: ${error}`);
             return [];
+        }
+    }
+
+    private async fetchAllGuilds(): Promise<Guild[]> {
+        const guilds: Guild[] = [];
+        let after: string | undefined;
+        while (true) {
+            const query = new URLSearchParams({limit: String(GUILDS_PAGE_SIZE)});
+            if (after) query.set("after", after);
+
+            const page = await this.rest.get(Routes.userGuilds(), {query}) as Guild[];
+            guilds.push(...page);
+
+            const last = page[page.length - 1];
+            if (page.length < GUILDS_PAGE_SIZE || !last) return guilds;
+            after = last.id;
         }
     }
 
