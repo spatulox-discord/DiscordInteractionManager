@@ -210,6 +210,24 @@ describe("BaseInteractionManager.listPerGuild", () => {
     });
 });
 
+describe("BaseInteractionManager progress", () => {
+    it("shows how many guilds are fetched on a terminal", async () => {
+        const {manager} = createManager(() => []);
+        const isTTY = process.stdout.isTTY;
+        const written: string[] = [];
+        mock.method(process.stdout, "write", (text: string) => { written.push(text); return true; });
+        process.stdout.isTTY = true;
+        try {
+            await manager.listPerGuild([guild(G1), guild(G2)]);
+        } finally {
+            process.stdout.isTTY = isTTY;
+            mock.restoreAll();
+        }
+
+        assert.deepEqual(written, ["\r📡 0/2 guild(s) fetched", "\r📡 1/2 guild(s) fetched", "\r📡 2/2 guild(s) fetched", "\n\n"]);
+    });
+});
+
 describe("BaseInteractionManager.countPerGuild", () => {
     it("counts the global and guild commands available in each guild", async () => {
         const remote: Record<string, unknown[]> = {

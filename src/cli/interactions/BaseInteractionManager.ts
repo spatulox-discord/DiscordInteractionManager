@@ -240,9 +240,9 @@ export abstract class BaseInteractionManager {
         }
         console.log(`📡 Counting the ${this.folderPath} of ${guilds.length} guild(s)...\n`);
 
-        // list and listGuild log their own errors and return an empty list
+        // list logs its own errors and returns an empty list
         const globalCount = (await this.list(false)).length;
-        const guildCounts = await Promise.all(guilds.map(async guild => (await this.listGuild(guild.id, false)).length));
+        const guildCounts = (await this.fetchEachGuild(guilds)).map(commands => commands.length);
 
         const label = this.folderPath.charAt(0).toUpperCase() + this.folderPath.slice(1);
         console.log(`📊 ${this.folderPath.toUpperCase()} PER GUILD :`);
@@ -261,8 +261,7 @@ export abstract class BaseInteractionManager {
      * with their ID in each guild and the matching local file if any.
      */
     async listPerGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<Interaction[]> {
-        // listGuild logs its own errors and returns an empty list
-        const perGuild = await Promise.all(guilds.map(guild => this.listGuild(guild.id, false)));
+        const perGuild = await this.fetchEachGuild(guilds);
 
         const merged = new Map<string, Interaction & { command_scope: "guild" }>();
         for (const cmd of perGuild.flat()) {
@@ -282,6 +281,28 @@ export abstract class BaseInteractionManager {
             if (remote) remote.filename = file;
         }
         return commands;
+    }
+
+    /**
+     * Fetches the guild interactions of each guild, in the order of the guilds.
+     * Shows how many guilds are done on a terminal, since it takes a while for a bot in many guilds.
+     * listGuild logs its own errors and returns an empty list.
+     */
+    private async fetchEachGuild(guilds: RESTAPIPartialCurrentUserGuild[]): Promise<Interaction[][]> {
+        const progress = process.stdout.isTTY
+            ? (done: number) => process.stdout.write(`\r📡 ${done}/${guilds.length} guild(s) fetched`)
+            : () => {};
+        let done = 0;
+        progress(done);
+
+        const perGuild = await Promise.all(guilds.map(async guild => {
+            const commands = await this.listGuild(guild.id, false);
+            progress(++done);
+            return commands;
+        }));
+
+        if (process.stdout.isTTY) process.stdout.write("\n\n");
+        return perGuild;
     }
 
     private async readGuildFiles(): Promise<{ cmd: Interaction, file: string }[]> {
