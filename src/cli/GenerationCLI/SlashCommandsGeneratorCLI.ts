@@ -30,7 +30,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         };
 
         console.clear();
-        console.log("📝 1/7 - Base");
+        console.log("📝 1/8 - Base");
         config.name = await this.requireInput(
             "Name (a-z0-9_-, 1-32 chars): ",
             val => /^[a-z0-9_-]{1,32}$/.test(val)
@@ -42,36 +42,36 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         await this.nsfw(config)
 
         console.clear();
-        console.log("🔐 2/7 - Command Permissions");
+        console.log("🔐 2/8 - Command Permissions");
         await this.addPermissions(config);
 
         console.clear();
-        console.log("💬 3/7 - DM Permissions");
+        console.log("💬 3/8 - DM Permissions");
         config.dm_permission = await this.yesNoInput("Authorize DM ? (y/n): ");
 
         console.clear();
-        console.log("💬 4/7 - Context");
+        console.log("💬 4/8 - Context");
         const ctx = await this.context()
         if(ctx.length > 0){
             config.contexts = ctx
         }
 
         console.clear();
-        console.log("💬 4/7 - Integration Type");
+        console.log("💬 5/8 - Integration Type");
         const int_type = await this.integration_context()
         if(int_type.length > 0){
             config.integration_types = int_type
         }
 
         console.clear();
-        console.log("⚙️ 5/7 - Options/Subcommands");
+        console.log("⚙️ 6/8 - Options/Subcommands");
         const result = await this.addOptions();
         if(result.length > 0){
             config.options = result;
         }
 
         console.clear();
-        console.log("⚙️ 6/7 - Guild Specific");
+        console.log("⚙️ 7/8 - Guild Specific");
         if(await this.yesNoInput("Guild Specific ? (y/n): ")) {
             const id = await this.optionalGuildIds();
             if(id) {
@@ -81,7 +81,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         }
 
         console.clear();
-        console.log("💾 7/7 - Save");
+        console.log("💾 8/8 - Save");
         return await this.save(FolderName.SLASH_COMMANDS, config)
     }
 
