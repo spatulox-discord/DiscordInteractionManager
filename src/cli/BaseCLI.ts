@@ -82,13 +82,14 @@ export abstract class BaseCLI {
         console.log('🎯 Features (Manage Interactions → Command / ContextMenu Manager):');
         console.log('  🌍 Global → Global interactions only');
         console.log('  🏠 Guild  → Choose a guild once, every action only applies to that guild');
-        console.log('  In both menus:');
+        console.log('  🌐 All guilds → Guild interactions in every guild: list with their number of guilds, count per guild, update in all their guilds, delete from all guilds');
+        console.log('  In the Global and Guild menus:');
         console.log('  📊 List    → Show deployed interactions on Discord, or local JSON files, then enter numbers to see their details');
         console.log('  🚀 Deploy  → Deploy local JSON files → Discord');
         console.log('  🔄 Update  → Update Discord interactions based on local JSON files');
         console.log('  🗑️ Delete  → Remove Discord interactions and their ID from local JSON files');
         console.log('  💾 Save    → Save deployed interactions into generated_* JSON files');
-        console.log('  The Guild menu can also add a guild interaction to the guild, list everything available in the guild and count interactions per guild');
+        console.log('  The Guild menu can also add a guild interaction to the guild and list everything available in the guild');
 
         console.log('');
         console.log('🎮 Selection:');

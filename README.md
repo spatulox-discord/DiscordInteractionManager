@@ -78,26 +78,29 @@ Choose an option:
 
 > - When generating files with the cli, you should be able to see generated files in the "**./handlers**"*
 
+> - For a guild interaction, the generator lists the guilds of your bot : enter their numbers (e.g. `0,2`), or leave empty to choose them later with "Add a guild ... to this guild" in the Guild menu
+
 ## Manage interactions
 "Manage Interactions" → "Command Manager" or "ContextMenu Manager" lets you pick a scope**:
 ```
 1. Global        ← global interactions only
 2. Guild         ← asks for a guild once, then every action only applies to that guild
-3. Back
+3. All guilds    ← guild interactions in every guild at once
+4. Back
 ```
 
-| Action | Global | Guild |
-|---|---|---|
-| List deployed | ✅ | ✅ (interactions specific to the guild) |
-| List all available (global + guild) | | ✅ |
-| List local files | ✅ | ✅ (files targeting the guild) |
-| Deploy local | ✅ | ✅ (only to the chosen guild) |
-| Add a guild interaction to the guild | | ✅ (guild files that do not target the guild yet) |
-| Update | ✅ | ✅ (only in the chosen guild) |
-| Delete | ✅ | ✅ (only from the chosen guild) |
-| Save deployed interactions into files | ✅ `generated_<folder>/` | ✅ `generated_<folder>/<guildId>/` |
-| Count interactions per guild | | ✅ |
-| Change guild | | ✅ |
+| Action | Global | Guild | All guilds |
+|---|---|---|---|
+| List deployed | ✅ | ✅ (interactions specific to the guild) | ✅ (each guild interaction with its number of guilds and local file) |
+| List all available (global + guild) | | ✅ | |
+| List local files | ✅ | ✅ (files targeting the guild) | |
+| Deploy local | ✅ | ✅ (only to the chosen guild) | |
+| Add a guild interaction to the guild | | ✅ (guild files that do not target the guild yet) | |
+| Update | ✅ | ✅ (only in the chosen guild) | ✅ (in every guild it is deployed in) |
+| Delete | ✅ | ✅ (only from the chosen guild) | ✅ (from every guild, even without local file) |
+| Save deployed interactions into files | ✅ `generated_<folder>/` | ✅ `generated_<folder>/<guildId>/` | |
+| Count interactions per guild | | | ✅ |
+| Change guild | | ✅ | |
 
 After any "List" action, enter the numbers of the table (e.g. `0,2`) to see the details of these interactions, or press Enter to go back:
 ```

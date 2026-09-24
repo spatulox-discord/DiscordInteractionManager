@@ -10,6 +10,7 @@ Date format : dd/mm/yyyy
     - The optional variables (`DISCORD_INTERACTION_FOLDER`, `DISCORD_BOT_DEV`) are documented in `.env.example`
     - Stage channels (`13`) can be chosen in the channel types of a `CHANNEL` option
     - After a listing, the numbers of the table show the details of the interactions : scope and IDs, permissions, contexts, integration types, NSFW, localizations, local file, and the options as a tree (types, required, limits, autocomplete, channel types, choices). "List all available" in the Guild menu now prints one table (the GuildID column tells global interactions apart)
+    - An "All guilds" menu next to Global and Guild : lists each guild interaction with the number of guilds it is deployed in (from Discord, with its local file and details), counts interactions per guild, updates guild interactions in all their guilds and deletes them from every guild (even without local file)
     - "Add a guild ... to this guild" in the Guild menu : deploys a guild interaction to a guild it does not target yet, and adds the guild with its new ID to the local file
 - Change :
     - `DISCORD_BOT_CLIENTID` is no longer needed : the application ID is fetched from Discord with the token (`GET /applications/@me`)
@@ -28,7 +29,8 @@ Date format : dd/mm/yyyy
     - Each permission is listed once (deprecated aliases such as `ManageEmojisAndStickers` are hidden, but still accepted in local files)
     - Only `dist` is published on npm (`files` whitelist instead of `.npmignore`)
     - The CLI class hierarchy is simplified (`Prompt` helper, `GuildListManager` becomes `GuildSelector`)
-    - The Command and ContextMenu managers start with a Global / Guild choice. Global only handles global interactions (deploying no longer deploys guild files, updating no longer updates every guild). Guild asks for the guild once and every action only applies to it. The separate List menu and the "y=global/n=specific" questions are gone, and guild interactions saved from Discord go to `generated_<folder>/<guildId>/`
+    - The Command and ContextMenu managers start with a Global / Guild choice. Global only handles global interactions (deploying no longer deploys guild files, updating no longer updates every guild). Guild asks for the guild once and every action only applies to it. The separate List menu and the "y=global/n=specific" questions are gone, guild interactions saved from Discord go to `generated_<folder>/<guildId>/`, and "Count per guild" is in the All guilds menu
+    - The generators list the guilds of the bot for a guild interaction and take their numbers (raw guild IDs were asked). Leaving it empty keeps a guild interaction with no guild yet, to add later from the Guild menu, instead of turning it into a global one
 - Fix :
     - Administrators only commands (`default_member_permissions: "0"`) saved from Discord became public once deployed again
     - The channel types `10` (announcement thread) and `11` (public thread) had their labels swapped in the generator
