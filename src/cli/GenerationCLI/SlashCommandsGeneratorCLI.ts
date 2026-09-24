@@ -22,7 +22,6 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     protected async generate(): Promise<void> {
         const config: SlashCommandConfigGenerator = {
             command_scope: "global",
-            id: "",
             name: "",
             description: "",
             type: 1,

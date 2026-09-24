@@ -16,7 +16,6 @@ export class ContextMenuGeneratorCLI extends InteractionGeneratorCLI {
     protected async generate(): Promise<void> {
         const config: ContextMenuConfigGenerator = {
             command_scope: "global",
-            id: "",
             dm_permission: true,
             name: "",
             type: 2
