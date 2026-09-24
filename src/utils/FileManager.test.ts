@@ -26,3 +26,14 @@ describe("FileManager.fileExists", () => {
         assert.equal(error.mock.callCount(), 0);
     });
 });
+
+describe("FileManager.isSafeFilename", () => {
+    it("rejects names that leave the target folder", () => {
+        for (const name of ["ping", "ping.json", "my command", "ping..json"]) {
+            assert.equal(FileManager.isSafeFilename(name), true, name);
+        }
+        for (const name of ["", " ", ".", "..", "../ping", "a/b", "a\\b", "/etc/passwd"]) {
+            assert.equal(FileManager.isSafeFilename(name), false, name);
+        }
+    });
+});

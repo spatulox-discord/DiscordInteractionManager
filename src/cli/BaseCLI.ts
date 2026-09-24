@@ -166,7 +166,7 @@ export abstract class BaseCLI {
     protected async save(folderName: FolderName,config: ContextMenuConfigGenerator | SlashCommandConfigGenerator): Promise<void> {
         let tmp: void | -1 = -1
         while (tmp == -1) {
-            const filename = await this.requireInput("Filename : ");
+            const filename = await this.requireInput("Filename : ", FileManager.isSafeFilename);
             tmp = await this.saveFile(folderName, filename, config);
         }
         return tmp

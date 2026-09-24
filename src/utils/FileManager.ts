@@ -18,6 +18,11 @@ export class FileManager {
         }
     }
 
+    static isSafeFilename(filename: string): boolean {
+        const name = filename.trim();
+        return name !== '' && name !== '.' && name !== '..' && !/[\\/]/.test(name);
+    }
+
     static async fileExists(filePath: string): Promise<boolean> {
         try {
             await fs.access(filePath);
