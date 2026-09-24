@@ -18,6 +18,15 @@ export class FileManager {
         }
     }
 
+    static async fileExists(filePath: string): Promise<boolean> {
+        try {
+            await fs.access(filePath);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     /**
      * Lists all directories in a given path.
      * @param directoryPath Path to scan for directories

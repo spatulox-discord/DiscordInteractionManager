@@ -17,3 +17,12 @@ describe("FileManager.writeJsonFile", () => {
         }
     });
 });
+
+describe("FileManager.fileExists", () => {
+    it("tells whether a file exists without logging an error", async (t) => {
+        const error = t.mock.method(console, "error", () => {});
+        assert.equal(await FileManager.fileExists(path.join(os.tmpdir(), "dim-missing-file.json")), false);
+        assert.equal(await FileManager.fileExists(os.tmpdir()), true);
+        assert.equal(error.mock.callCount(), 0);
+    });
+});

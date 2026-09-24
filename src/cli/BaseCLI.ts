@@ -186,7 +186,7 @@ export abstract class BaseCLI {
         console.log(JSON.stringify(data, null, 2));
 
         let finalFilename = filename;
-        if(await FileManager.readJsonFile(PathUtils.createPathFile(folderName, filename.split(".json")[0] + ".json"))){
+        if(await FileManager.fileExists(PathUtils.createPathFile(folderName, filename.replace(/\.json$/i, '') + ".json"))){
             if (!await this.yesNoInput(`"${finalFilename}" already exists. Overwrite? (y/n): `)) {
                 return -1
             }
