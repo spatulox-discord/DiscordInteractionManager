@@ -163,24 +163,7 @@ export abstract class BaseInteractionManager {
             const rawCmds = await this.rest.get(endpoint) as any[];
             const commands = rawCmds.filter(cmd => this.commandType.includes(cmd.type));
 
-            const commandList: Interaction[] = commands.map((cmd: OnlineInteractionConfig, _index: number) => ({
-                name: cmd.name,
-                description: 'description' in cmd ? cmd.description : 'N/A',
-                default_member_permissions: cmd.default_member_permissions,
-                default_member_permissions_string: Utils.bitfieldToPermissions(cmd.default_member_permissions),
-                dm_permission: cmd.dm_permission,
-                contexts: cmd.contexts,
-                integration_types: cmd.integration_types,
-                ...(cmd.guild_id ? {
-                    command_scope: scope as "guild",
-                    id: {[cmd.guild_id]: cmd.id},
-                    type: cmd.type as CommandType
-                } : {
-                    command_scope: scope as 'global',
-                    id: cmd.id,
-                    type: cmd.type as CommandType
-                })
-            }));
+            const commandList: Interaction[] = commands.map((cmd: OnlineInteractionConfig) => InteractionPayload.fromDiscord(cmd));
 
             if(printResult) {
                 console.log(`${commandList.length} ${this.folderPath}(s) found\n`);

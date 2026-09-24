@@ -61,3 +61,27 @@ describe("InteractionPayload.toDiscord", () => {
         assert.deepEqual(InteractionPayload.toDiscord(cmd), {name: "Report", type: 3});
     });
 });
+
+describe("InteractionPayload.fromDiscord", () => {
+    const base = {id: "c1", application_id: "app", version: "v1", dm_permission: true, default_member_permissions: null};
+
+    it("keeps options and every Discord field of a slash command", () => {
+        const options = [{type: 3, name: "query", description: "Query", required: true}];
+        const raw = {...base, type: 1, name: "search", description: "Search", options, nsfw: true, contexts: [0]} as any;
+
+        assert.deepEqual(InteractionPayload.fromDiscord(raw), {
+            type: 1, name: "search", description: "Search", options, nsfw: true, contexts: [0],
+            dm_permission: true, default_member_permissions: null, default_member_permissions_string: [],
+            command_scope: "global", id: "c1",
+        });
+    });
+
+    it("stores guild commands with their guild ID", () => {
+        const raw = {...base, type: 3, name: "Report", description: "", guild_id: "111"} as any;
+        const cmd = InteractionPayload.fromDiscord(raw);
+
+        assert.equal(cmd.command_scope, "guild");
+        assert.deepEqual(cmd.id, {"111": "c1"});
+        assert.equal("description" in cmd, false);
+    });
+});
