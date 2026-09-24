@@ -11,6 +11,7 @@ Date format : dd/mm/yyyy
     - Stage channels (`13`) can be chosen in the channel types of a `CHANNEL` option
     - After a listing, the numbers of the table show the details of the interactions : scope and IDs, permissions, contexts, integration types, NSFW, localizations, local file, and the options as a tree (types, required, limits, autocomplete, channel types, choices). "List all available" in the Guild menu now prints one table (the GuildID column tells global interactions apart)
     - An "All guilds" menu next to Global and Guild : lists each guild interaction with the number of guilds it is deployed in (from Discord, with its local file and details), counts interactions per guild, updates guild interactions in all their guilds and deletes them from every guild (even without local file)
+    - Local files are checked when read : guild IDs (keys of `id`) and interaction IDs must be Discord IDs, so a mistyped ID is reported with the file name instead of failing on Discord. The empty global `"id": ""` written by older generators is still accepted
     - "Add a guild ... to this guild" in the Guild menu : deploys a guild interaction to a guild it does not target yet, and adds the guild with its new ID to the local file
 - Change :
     - `DISCORD_BOT_CLIENTID` is no longer needed : the application ID is fetched from Discord with the token (`GET /applications/@me`)
