@@ -53,6 +53,25 @@ describe("SlashCommandGeneratorCLI.optionalNumber", () => {
     });
 });
 
+describe("SlashCommandGeneratorCLI.handleOptionType", () => {
+    it("never accepts a maximum below the minimum", async () => {
+        const answers = ["n", "10", "5", "10", "n"];
+        const option: any = {};
+        await scripted(answers).handleOptionType(option, DiscordOptionType.STRING);
+        assert.deepEqual(answers, []);
+        assert.equal(option.min_length, 10);
+        assert.equal(option.max_length, 10);
+    });
+
+    it("never accepts a maximum value below the minimum value", async () => {
+        const answers = ["-2", "-3", "-2", "n"];
+        const option: any = {};
+        await scripted(answers).handleOptionType(option, DiscordOptionType.INTEGER);
+        assert.deepEqual(answers, []);
+        assert.equal(option.max_value, -2);
+    });
+});
+
 describe("SlashCommandGeneratorCLI options rules", () => {
     const {SUB_COMMAND, SUB_COMMAND_GROUP, STRING, USER} = DiscordOptionType;
     const option = (type: DiscordOptionType, required?: boolean): CommandOption => ({type, name: `o${type}`, description: "d", required});

@@ -160,13 +160,17 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             case 3: // STRING
                 if (await this.input.yesNoInput("Autocomplete ? ")) option.autocomplete = true;
                 option.min_length = await this.optionalNumber("Min length (0-6000): ", {integer: true, min: 0, max: 6000});
-                option.max_length = await this.optionalNumber("Max Length (1-6000): ", {integer: true, min: 1, max: 6000});
+                const minMaxLength = Math.max(1, option.min_length ?? 0);
+                option.max_length = await this.optionalNumber(`Max Length (${minMaxLength}-6000): `, {integer: true, min: minMaxLength, max: 6000});
                 if (!option.autocomplete) option.choices = await this.addChoices(type);
                 break;
 
             case 4: case 10: // INTEGER/NUMBER
                 option.min_value = await this.optionalNumber("Min value: ", {integer: type === 4});
-                option.max_value = await this.optionalNumber("Max value: ", {integer: type === 4});
+                option.max_value = await this.optionalNumber(
+                    option.min_value === undefined ? "Max value: " : `Max value (≥ ${option.min_value}): `,
+                    {integer: type === 4, min: option.min_value}
+                );
                 option.choices = await this.addChoices(type);
                 break;
 
