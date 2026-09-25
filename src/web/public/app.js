@@ -382,7 +382,7 @@ async function countPerGuild() {
     const rows = counts.map(row => h("tr", {}, h("td", {}, `${row.name} (${row.id})`), h("td", {}, row.global), h("td", {}, row.specific), h("td", {}, row.global + row.specific)));
     $("#details-title").textContent = "Per guild";
     replace($("#details-body"), h("table", {},
-        h("thead", {}, h("tr", {}, ["Guild", "Global", "Guild", "Total"].map(label => h("th", {}, label)))),
+        h("thead", {}, h("tr", {}, ["Guild", "Global", "Guild specific", "Total"].map(label => h("th", {}, label)))),
         h("tbody", {}, rows)));
     $("#details").hidden = false;
 }
