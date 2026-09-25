@@ -253,7 +253,7 @@ function renderActions() {
     if (state.scope === "all") {
         remoteActions.push(button("Count per guild", countPerGuild, {tone: "ghost"}));
     } else {
-        remoteActions.push(button("Save into files", saveRemote, {tone: "ghost"}));
+        remoteActions.push(button("Save into files", saveRemote, {tone: "ghost", disabled: state.scope === "guild" && !state.guildId}));
     }
     replace($("#remote-actions"), remoteActions);
 }
@@ -388,9 +388,13 @@ async function deleteFiles(commands) {
 }
 
 async function saveRemote() {
+    const global = state.scope === "global";
+    const folder = `${state.app.generatedFolders[state.kind]}${global ? "" : `/${state.guildId}`}`;
+    const what = global ? "the global interactions" : `the interactions of the guild "${guildName(state.guildId)}"`;
+    if (!await confirmDialog(`Save ${what} into ${folder}? The files already there with the same name are replaced.`, "Save")) return;
     await run(async () => {
-        const {folder} = await api("POST", `${state.kind}/save-remote`, scopeBody());
-        log("info", `Saved into ${folder}${state.scope === "guild" ? `/${state.guildId}` : ""}`);
+        await api("POST", `${state.kind}/save-remote`, scopeBody());
+        log("info", `Saved into ${folder}`);
     });
 }
 

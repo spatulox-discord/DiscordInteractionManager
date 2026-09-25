@@ -211,6 +211,8 @@ export class WebServer {
             dev: Env.dev,
             folder: Env.interactionFolderPath,
             folders: Object.fromEntries(Object.values(FolderName).map(kind => [kind, PathUtils.createPathFolder(kind)])),
+            // Where "Save into files" writes the interactions listed from Discord
+            generatedFolders: Object.fromEntries(Object.values(FolderName).map(kind => [kind, PathUtils.createPathFolder("generated_" + kind)])),
         };
     }
 
