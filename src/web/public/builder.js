@@ -33,6 +33,7 @@ export class Builder {
         this.optionTypeNames = Object.fromEntries(meta.optionTypes.map(({name, value}) => [value, name]));
         this.allTypes = meta.optionTypes.map(({value}) => value);
         this.permissionFilter = "";
+        this.guildFilter = "";
 
         // Outside of the rendered content, so a render does not replay its animation
         this.content = h("div");
@@ -49,6 +50,8 @@ export class Builder {
     async open(kind, filename) {
         this.kind = kind;
         this.errors = [];
+        this.permissionFilter = "";
+        this.guildFilter = "";
         this.filename = filename ?? "";
         this.existing = !!filename;
         this.original = null;
@@ -428,15 +431,32 @@ export class Builder {
             cmd.id ??= {};
             const known = new Set(this.guilds.map(guild => guild.id));
             const entries = [...this.guilds, ...Object.keys(cmd.id).filter(id => !known.has(id)).map(id => ({id, name: "Unknown guild"}))];
-            guilds = h("div", {class: "field"},
-                h("span", {class: "label"}, "Guilds"),
-                entries.length === 0 ? h("p", {class: "hint"}, "The bot is in no guild") : h("div", {class: "checks grid"}, entries.map(guild => {
+
+            // Filtered by name or ID, the checked guilds staying visible, as the permissions
+            const items = h("div", {class: "checks grid"});
+            const renderItems = () => {
+                const search = this.guildFilter.trim().toLowerCase();
+                const shown = entries.filter(guild => !search || guild.id in cmd.id
+                    || guild.name.toLowerCase().includes(search) || guild.id.includes(search));
+                replace(items, shown.length === 0 ? h("p", {class: "hint"}, "No guild matches") : shown.map(guild => {
                     const isDeployed = deployed.includes(guild.id);
-                    return this.checkbox(`${guild.name}${isDeployed ? " (deployed)" : ""}`, guild.id in cmd.id, checked => {
+                    return this.checkbox([guild.name, isDeployed ? " (deployed)" : "", h("span", {class: "guild-id mono"}, guild.id)], guild.id in cmd.id, checked => {
                         if (checked) cmd.id[guild.id] = null; else delete cmd.id[guild.id];
                         this.refreshSide();
-                    }, {disabled: isDeployed, title: isDeployed ? "Delete it from this guild first (Guild scope of the list)" : guild.id});
-                })),
+                    }, {disabled: isDeployed, title: isDeployed ? "Delete it from this guild first (Guild scope of the list)" : undefined});
+                }));
+            };
+            renderItems();
+
+            guilds = h("div", {class: "field"},
+                h("span", {class: "label"}, "Guilds"),
+                entries.length === 0 ? h("p", {class: "hint"}, "The bot is in no guild") : [
+                    h("input", {type: "search", placeholder: "Search a guild by name or ID", "aria-label": "Search a guild", value: this.guildFilter, oninput: event => {
+                        this.guildFilter = event.target.value;
+                        renderItems();
+                    }}),
+                    items,
+                ],
                 h("span", {class: "hint"}, "Checked guilds stay pending until you deploy them from the Guild scope of the list"),
             );
         }
