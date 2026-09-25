@@ -255,7 +255,8 @@ td.wide { min-width: 200px; }
     flex-direction: column;
 }
 .drawer-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-.drawer pre { margin: 0; padding: 16px; overflow: auto; white-space: pre-wrap; }
+.drawer-body { padding: 16px; overflow: auto; }
+.drawer-body pre { margin: 0; white-space: pre-wrap; }
 
 dialog {
     border: 1px solid var(--border);

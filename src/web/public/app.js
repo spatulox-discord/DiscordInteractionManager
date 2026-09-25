@@ -260,7 +260,7 @@ function renderActions() {
 
 function showDetails(cmd) {
     $("#details-title").textContent = cmd.name;
-    $("#details-body").textContent = cmd.details.join("\n");
+    replace($("#details-body"), h("pre", {class: "mono"}, cmd.details.join("\n")));
     openDetails();
 }
 
