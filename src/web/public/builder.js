@@ -55,6 +55,8 @@ export class Builder {
         this.filename = filename ?? "";
         this.existing = !!filename;
         this.original = null;
+        // Nothing to lose until it is loaded: the previous interaction would look changed and keep the window open
+        this.cmd = undefined;
 
         if (filename) {
             replace(this.content, h("p", {class: "empty"}, "Loading…"));
