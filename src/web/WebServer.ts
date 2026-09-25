@@ -434,7 +434,8 @@ export class WebServer {
         if (exists) WebServer.keepIds(saved, await this.readFile(context));
         else WebServer.dropIds(saved);
 
-        if (!await FileManager.writeJsonFile(path.dirname(filePath), path.basename(filePath), saved)) {
+        // The page tells it is saved
+        if (!await FileManager.writeJsonFile(path.dirname(filePath), path.basename(filePath), saved, true)) {
             throw new HttpError(500, `${path.basename(filePath)} could not be saved`);
         }
         return {filename: path.basename(filePath), interaction: saved};

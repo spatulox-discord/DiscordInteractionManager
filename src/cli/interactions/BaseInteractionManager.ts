@@ -594,13 +594,15 @@ export abstract class BaseInteractionManager {
     async saveToGeneratedFiles(commands: Interaction[], subFolder?: string): Promise<void> {
         const folder = PathUtils.createPathFolder("generated_" + this.folderPath) + (subFolder ? `/${subFolder}` : "");
         const usedFilenames = new Set<string>();
+        let saved = 0;
         for (const cmd of commands) {
             // A user and a message context menu can share the same name
             let filename = FileManager.toSafeFilename(cmd.name);
             if (usedFilenames.has(filename.toLowerCase())) filename = `${filename}_${cmd.type}`;
             usedFilenames.add(filename.toLowerCase());
-            await FileManager.writeJsonFile(folder, filename, cmd)
+            if (await FileManager.writeJsonFile(folder, filename, cmd, true)) saved++;
         }
+        Log.print(`${saved}/${commands.length} ${this.folderPath}(s) saved into ${folder}`);
     }
 
     /**

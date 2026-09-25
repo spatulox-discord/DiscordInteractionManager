@@ -6,6 +6,7 @@ Date format : dd/mm/yyyy
     - A local web UI, started with `npx dim web` (`--port`, `--no-open`) or "Open Web UI" in the main menu : list, deploy, update and delete interactions in the Global, Guild and All guilds scopes, and create or edit interaction files with a visual builder. It only listens on `127.0.0.1` and needs the session token of the printed URL
 - Change :
     - The builder of the web UI and the generators of the CLI share the same rules (names, options, choices and their limits)
+    - "Save ... into local files" ends with how many interactions were saved and in which folder, instead of a line per file
 
 ### 24/09/2026 - 2.3.2
 - Change :

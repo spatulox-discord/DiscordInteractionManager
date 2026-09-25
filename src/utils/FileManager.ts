@@ -86,12 +86,14 @@ export class FileManager {
      * @param directoryPath Full directory path (creates if missing)
      * @param filename Filename without extension
      * @param data Data to write (JSON serializable)
+     * @param quiet true when the caller reports the save itself: only the errors are logged
      * @returns true on success, false on failure
      */
     static async writeJsonFile(
         directoryPath: string,
         filename: string,
-        data: unknown
+        data: unknown,
+        quiet: boolean = false
     ): Promise<boolean> {
         // Skip if data is an Error array
         if (Array.isArray(data) && data.length === 1 && data[0] === 'Error') {
@@ -112,7 +114,7 @@ export class FileManager {
             const jsonContent = JSON.stringify(data, null, 2);
 
             await this.writeFileAtomic(filePath, jsonContent);
-            Log.info(`Successfully wrote data to ${filePath}`);
+            if (!quiet) Log.info(`Successfully wrote data to ${filePath}`);
             return true;
 
         } catch (error) {

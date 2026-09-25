@@ -392,10 +392,8 @@ async function saveRemote() {
     const folder = `${state.app.generatedFolders[state.kind]}${global ? "" : `/${state.guildId}`}`;
     const what = global ? "the global interactions" : `the interactions of the guild "${guildName(state.guildId)}"`;
     if (!await confirmDialog(`Save ${what} into ${folder}? The files already there with the same name are replaced.`, "Save")) return;
-    await run(async () => {
-        await api("POST", `${state.kind}/save-remote`, scopeBody());
-        log("info", `Saved into ${folder}`);
-    });
+    // The answer tells how many were saved
+    await run(() => api("POST", `${state.kind}/save-remote`, scopeBody()));
 }
 
 async function countPerGuild() {
