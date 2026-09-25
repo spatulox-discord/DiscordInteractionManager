@@ -261,7 +261,23 @@ function renderActions() {
 function showDetails(cmd) {
     $("#details-title").textContent = cmd.name;
     $("#details-body").textContent = cmd.details.join("\n");
+    openDetails();
+}
+
+let focusBeforeDetails = null;
+
+// The drawer takes the focus, and gives it back when closed
+function openDetails() {
+    if ($("#details").hidden) focusBeforeDetails = document.activeElement;
     $("#details").hidden = false;
+    $("#details-close").focus();
+}
+
+function closeDetails() {
+    if ($("#details").hidden) return;
+    $("#details").hidden = true;
+    if (focusBeforeDetails?.isConnected) focusBeforeDetails.focus();
+    focusBeforeDetails = null;
 }
 
 // ---- Loading ----
@@ -404,7 +420,7 @@ async function countPerGuild() {
     replace($("#details-body"), h("table", {},
         h("thead", {}, h("tr", {}, ["Guild", "Global", "Guild specific", "Total"].map(label => h("th", {}, label)))),
         h("tbody", {}, rows)));
-    $("#details").hidden = false;
+    openDetails();
 }
 
 // ---- Navigation ----
@@ -515,8 +531,9 @@ function bindNavigation() {
         if ($("#editor").open && editor?.isDirty()) event.preventDefault();
     });
     $("#clear-log").addEventListener("click", () => replace($("#log")));
-    $("#details-close").addEventListener("click", () => { $("#details").hidden = true; });
-    document.addEventListener("keydown", event => { if (event.key === "Escape") $("#details").hidden = true; });
+    $("#details-close").addEventListener("click", closeDetails);
+    // Escape in the editor or a confirmation closes them, not the drawer behind
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("dialog[open]")) closeDetails(); });
 }
 
 async function start() {
