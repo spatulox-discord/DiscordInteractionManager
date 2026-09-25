@@ -6,6 +6,7 @@ const state = {
     app: null,
     meta: null,
     guilds: [],
+    guildsLoaded: false,
     kind: "commands",
     scope: "global",
     guildId: "",
@@ -400,6 +401,21 @@ async function countPerGuild() {
 
 const KIND_TITLES = {commands: "Slash commands", context_menu: "Context menus"};
 
+// ---- Guilds ----
+
+// The Global scope works without them: when they cannot be listed, Refresh tries again
+async function loadGuilds() {
+    const guilds = await api("GET", "guilds").catch(() => null);
+    state.guildsLoaded = guilds !== null;
+    state.guilds = guilds ?? [];
+    if (editor) editor.guilds = state.guilds;
+    replace($("#guild-select"),
+        h("option", {value: ""}, state.guildsLoaded ? "Choose a guild" : "Cannot list the guilds: Refresh to try again"),
+        state.guilds.map(guild => h("option", {value: guild.id}, `${guild.name} (${guild.id})`)));
+    $("#guild-select").value = state.guilds.some(guild => guild.id === state.guildId) ? state.guildId : "";
+    state.guildId = $("#guild-select").value;
+}
+
 // ---- Editor window ----
 
 // Edits a local file, or creates one without filename
@@ -470,7 +486,10 @@ function bindNavigation() {
         state.selectedRemote.clear();
         refresh();
     });
-    $("#refresh").addEventListener("click", refresh);
+    $("#refresh").addEventListener("click", async () => {
+        if (!state.guildsLoaded) await loadGuilds();
+        refresh();
+    });
     window.addEventListener("beforeunload", event => {
         if ($("#editor").open && editor?.isDirty()) event.preventDefault();
     });
@@ -488,15 +507,13 @@ async function start() {
     }
 
     try {
-        [state.app, state.meta, state.guilds] = await Promise.all([api("GET", "app"), api("GET", "meta"), api("GET", "guilds")]);
+        [state.app, state.meta] = await Promise.all([api("GET", "app"), api("GET", "meta"), loadGuilds()]);
     } catch (error) {
         $("#bot").textContent = error.message;
         return;
     }
 
     replace($("#bot"), `Connected as ${state.app.name}`, state.app.dev ? h("span", {class: "badge warn"}, "DEV") : null);
-    replace($("#guild-select"), h("option", {value: ""}, "Choose a guild"),
-        state.guilds.map(guild => h("option", {value: guild.id}, `${guild.name} (${guild.id})`)));
 
     editor = new Builder($("#editor-body"), {
         meta: state.meta,
