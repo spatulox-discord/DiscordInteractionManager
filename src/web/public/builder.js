@@ -54,7 +54,7 @@ export class Builder {
             h("span", {}, "Careful, you have unsaved changes!"),
             h("div", {class: "actions"},
                 h("button", {type: "button", class: "text-button", onclick: () => this.reset()}, "Reset"),
-                this.saveButton = h("button", {type: "button", class: "success", onclick: () => this.save()}, "Save Changes"),
+                this.saveButton = h("button", {type: "button", class: "success", title: "Ctrl+S", onclick: () => this.save()}, "Save Changes"),
             ),
         );
         root.append(this.content, this.unsavedBar);

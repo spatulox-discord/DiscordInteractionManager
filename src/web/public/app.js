@@ -451,6 +451,12 @@ function bindEditor() {
     // Escape, and a click on the backdrop (the dialog itself, outside of its content)
     dialog.addEventListener("cancel", event => { event.preventDefault(); closeEditor(); });
     dialog.addEventListener("click", event => { if (event.target === dialog) closeEditor(); });
+    // Ctrl+S (Cmd+S on macOS) saves the changes instead of saving the page
+    dialog.addEventListener("keydown", event => {
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s") return;
+        event.preventDefault();
+        if (editor.isDirty()) editor.save();
+    });
     dialog.addEventListener("animationend", event => {
         if (event.target !== dialog || event.animationName !== "editor-out") return;
         dialog.classList.remove("closing");
