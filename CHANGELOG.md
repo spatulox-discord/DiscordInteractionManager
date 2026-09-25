@@ -1,7 +1,7 @@
 # Changelog
 Date format : dd/mm/yyyy
 
-### Unreleased - 2.4.0
+### 25/09/2026 - 2.4.0
 - Add :
     - A local web UI, started with `npx dim web` (`--port`, `--no-open`) or "Open Web UI" in the main menu : list, deploy, update and delete interactions in the Global, Guild and All guilds scopes, and create or edit interaction files with a visual builder. It only listens on `127.0.0.1` and needs the session token of the printed URL
 - Change :
