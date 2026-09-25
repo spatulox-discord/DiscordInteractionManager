@@ -48,6 +48,7 @@ export class Builder {
     }
 
     async open(kind, filename) {
+        this.opening = null;
         this.kind = kind;
         this.errors = [];
         this.permissionFilter = "";
@@ -59,14 +60,18 @@ export class Builder {
         this.cmd = undefined;
 
         if (filename) {
+            const opening = this.opening = Symbol(filename);
             replace(this.content, h("p", {class: "empty"}, "Loading…"));
+            let original;
             try {
-                this.original = await api("GET", `${kind}/files/${encodeURIComponent(filename)}`);
+                original = await api("GET", `${kind}/files/${encodeURIComponent(filename)}`);
             } catch (error) {
-                replace(this.content, h("p", {class: "empty"}, `${filename} cannot be opened: ${error.message}`));
+                if (opening === this.opening) replace(this.content, h("p", {class: "empty"}, `${filename} cannot be opened: ${error.message}`));
                 return;
             }
-            this.cmd = clone(this.original);
+            if (opening !== this.opening) return; // Closed, and another file opened meanwhile
+            this.original = original;
+            this.cmd = clone(original);
             this.filename = filename.replace(/\.json$/i, "");
         } else {
             this.cmd = kind === "commands"
