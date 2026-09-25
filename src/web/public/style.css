@@ -131,6 +131,8 @@ p { margin: 0; }
 
 main { max-width: 1400px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
 #interactions-view { display: grid; gap: 16px; }
+/* Between the local files and the interactions on Discord */
+.separator { width: 100%; margin: 8px 0; border: 0; border-top: 1px solid var(--border); }
 /* Wide tables scroll inside their panel instead of widening the page */
 main > *, #interactions-view > *, .builder > *, .builder-form > * { min-width: 0; }
 .panel-head h2 .mono { overflow-wrap: anywhere; }
