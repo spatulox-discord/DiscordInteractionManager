@@ -198,6 +198,7 @@ export class WebServer {
             .add("POST", "/api/:kind/update", context => this.update(context))
             .add("POST", "/api/:kind/delete", context => this.delete(context))
             .add("POST", "/api/:kind/save-remote", context => this.saveRemote(context))
+            .add("POST", "/api/:kind/validate", context => this.validate(context))
             .add("GET", "/api/:kind/files/:filename", context => this.readFile(context))
             .add("PUT", "/api/:kind/files/:filename", context => this.writeFile(context))
             .add("DELETE", "/api/:kind/files/:filename", context => this.deleteFile(context));
@@ -390,6 +391,28 @@ export class WebServer {
 
     // ---- Files of the builder ----
 
+    /**
+     * The errors a save would report, so the builder shows them while the interaction is built.
+     * The file name is checked when given, for a new file.
+     */
+    private validate(context: RouteContext) {
+        const manager = this.manager(context);
+        const body = WebServer.body(context);
+        const cmd = body.interaction as Record<string, unknown> | undefined;
+
+        const errors = InteractionRules.validateForSave(cmd);
+        const kindError = errors.length === 0 ? WebServer.kindError(manager, cmd!) : null;
+        if (kindError) errors.push(kindError);
+        const filenameError = typeof body.filename === "string" ? InteractionRules.filenameError(body.filename) : null;
+        if (filenameError) errors.unshift(`File name: ${filenameError}`);
+        return Promise.resolve({errors});
+    }
+
+    private static kindError(manager: BaseInteractionManager, cmd: Record<string, unknown>): string | null {
+        if (manager.commandType.includes(cmd.type as number)) return null;
+        return `A ${InteractionDetails.typeLabel(cmd.type as CommandType)} does not belong in the ${manager.folderPath} folder`;
+    }
+
     private filePath(context: RouteContext): string {
         const filename = context.params.filename!;
         const error = InteractionRules.filenameError(filename);
@@ -421,9 +444,8 @@ export class WebServer {
 
         const errors = InteractionRules.validateForSave(cmd);
         if (errors.length > 0) throw new HttpError(400, "The interaction is invalid", {errors});
-        if (!manager.commandType.includes(cmd!.type as number)) {
-            throw new HttpError(400, `A ${InteractionDetails.typeLabel(cmd!.type as CommandType)} does not belong in the ${manager.folderPath} folder`);
-        }
+        const kindError = WebServer.kindError(manager, cmd!);
+        if (kindError) throw new HttpError(400, kindError);
 
         const exists = await FileManager.fileExists(filePath);
         if (exists && body.overwrite !== true) throw new HttpError(409, `${context.params.filename} already exists`, {exists: true});

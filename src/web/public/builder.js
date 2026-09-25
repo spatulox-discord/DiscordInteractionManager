@@ -6,6 +6,7 @@ const T = {SUB_COMMAND: 1, SUB_COMMAND_GROUP: 2, STRING: 3, INTEGER: 4, BOOLEAN:
 const MAX_OPTIONS = 25;
 const MAX_CHOICES = 25;
 const MAX_STRING_LENGTH = 6000;
+const VALIDATION_DELAY_MS = 400;
 
 const isSubcommand = type => type === T.SUB_COMMAND || type === T.SUB_COMMAND_GROUP;
 const isNumeric = type => type === T.INTEGER || type === T.NUMBER;
@@ -61,6 +62,8 @@ export class Builder {
 
     async open(kind, filename) {
         this.opening = null;
+        clearTimeout(this.validationTimer);
+        this.validation = null;
         this.kind = kind;
         this.errors = [];
         this.permissionFilter = "";
@@ -282,8 +285,34 @@ export class Builder {
     refreshSide() {
         this.previewBox.textContent = JSON.stringify(this.output(), null, 2);
         this.showBar(this.isDirty());
+        this.renderErrors();
+        this.validateSoon();
+    }
+
+    renderErrors() {
         replace(this.errorsBox, this.errors.map(error => h("li", {}, error)));
         this.errorsBox.hidden = this.errors.length === 0;
+    }
+
+    /**
+     * Checks the changes with the rules of the save, a moment after the last one.
+     * Nothing is shown before the first change, so a new interaction does not open full of errors.
+     */
+    validateSoon() {
+        clearTimeout(this.validationTimer);
+        const check = this.validation = Symbol("validation");
+        if (!this.isDirty()) {
+            this.errors = [];
+            return this.renderErrors();
+        }
+        this.validationTimer = setTimeout(async () => {
+            const filename = this.filename.trim();
+            const body = {interaction: this.output(), filename: this.existing || !filename ? undefined : filename};
+            const result = await api("POST", `${this.kind}/validate`, body).catch(() => null);
+            if (!result || check !== this.validation) return; // Changed again meanwhile
+            this.errors = [...!this.existing && !filename ? ["File name: required"] : [], ...result.errors];
+            this.renderErrors();
+        }, VALIDATION_DELAY_MS);
     }
 
     section(title, ...children) {

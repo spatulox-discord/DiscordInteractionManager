@@ -233,6 +233,20 @@ describe("WebServer files", () => {
         assert.deepEqual(body.errors, ["name: lowercase letters, digits, - _ ', 1-32 characters", "description: 1-100 characters"]);
     });
 
+    it("checks an interaction being built with the rules of the save", async () => {
+        const invalid = await json("POST", "/api/commands/validate", {filename: "example_ping", interaction: {...ping, name: "Ping"}});
+        const wrongFolder = await json("POST", "/api/commands/validate", {interaction: {name: "Report", type: 2, command_scope: "global"}});
+        const valid = await json("POST", "/api/commands/validate", {filename: "ping", interaction: ping});
+
+        assert.deepEqual(invalid.body.data.errors, [
+            'File name: Files whose name starts with "example" are ignored, choose another name',
+            "name: lowercase letters, digits, - _ ', 1-32 characters",
+        ]);
+        assert.deepEqual(wrongFolder.body.data.errors, ["A User Context Menu does not belong in the commands folder"]);
+        assert.deepEqual(valid.body.data.errors, []);
+        assert.deepEqual(await fs.readdir(path.join(folder, "commands")), []);
+    });
+
     it("refuses a context menu in the commands folder, and unsafe or example names", async () => {
         assert.equal((await json("PUT", "/api/commands/files/report", {interaction: {name: "Report", type: 2, command_scope: "global"}})).status, 400);
         assert.equal((await json("PUT", "/api/commands/files/example_ping", {interaction: ping})).status, 400);
