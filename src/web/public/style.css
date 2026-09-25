@@ -162,7 +162,6 @@ button.text-button { background: none; border-color: transparent; color: var(--b
 button.text-button:hover:not(:disabled) { text-decoration: underline; filter: none; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent); text-align: left; white-space: normal; }
 button.link:hover { text-decoration: underline; filter: none; }
-button.busy { pointer-events: none; opacity: .6; }
 
 input[type=text], input[type=number], input[type=search], select {
     font: inherit;

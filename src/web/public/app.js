@@ -16,6 +16,7 @@ const state = {
     selectedDeploy: new Set(),
     selectedUpdate: new Set(),
     selectedRemote: new Set(),
+    busy: false, // An action is running: the others wait for it
 };
 
 const KIND_LABELS = {commands: "slash command", context_menu: "context menu"};
@@ -163,7 +164,7 @@ function localColumns(status) {
         nameColumn, typeColumn, descriptionColumn, permissionsColumn,
         {label: "Status", value: status},
         {label: "File", class: "mono", value: row => row.filename},
-        {label: "", value: row => h("button", {type: "button", class: "ghost small", onclick: () => openEditor(row.filename)}, "Edit")},
+        {label: "", value: row => h("button", {type: "button", class: "ghost small", disabled: state.busy, onclick: () => openEditor(row.filename)}, "Edit")},
     ];
 }
 
@@ -219,7 +220,7 @@ function selectedRemote() {
 }
 
 function button(label, onclick, {disabled = false, tone = ""} = {}) {
-    return h("button", {type: "button", class: tone, disabled, onclick}, label);
+    return h("button", {type: "button", class: tone, disabled: disabled || state.busy, onclick}, label);
 }
 
 function renderActions() {
@@ -317,14 +318,16 @@ function whereLabel(action) {
 
 const names = list => list.map(cmd => cmd.name).join(", ");
 
+// The buttons stay disabled while it runs, even when the tables are rendered again (e.g. a checkbox is clicked)
 async function run(action) {
-    $$("main button").forEach(element => element.classList.add("busy"));
+    state.busy = true;
+    renderTables();
     try {
         await action();
     } catch {
         // Already in the log
     } finally {
-        $$("main button").forEach(element => element.classList.remove("busy"));
+        state.busy = false;
         await refresh();
     }
 }
