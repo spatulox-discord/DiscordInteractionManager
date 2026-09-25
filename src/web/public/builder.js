@@ -41,7 +41,7 @@ export class Builder {
             h("span", {}, "Careful, you have unsaved changes!"),
             h("div", {class: "actions"},
                 h("button", {type: "button", class: "text-button", onclick: () => this.reset()}, "Reset"),
-                h("button", {type: "button", class: "success", onclick: () => this.save()}, "Save Changes"),
+                this.saveButton = h("button", {type: "button", class: "success", onclick: () => this.save()}, "Save Changes"),
             ),
         );
         root.append(this.content, this.unsavedBar);
@@ -615,12 +615,17 @@ export class Builder {
 
     // ---- Saving ----
 
+    // One save at a time: a double click would otherwise find the file just created and ask to overwrite it
     async save(overwrite = this.existing) {
+        if (this.saving) return;
         const filename = this.filename.trim().replace(/\.json$/i, "");
         this.errors = [];
         if (!filename) this.errors.push("File name: required");
         if (this.errors.length) return this.refreshSide();
 
+        this.saving = true;
+        this.saveButton.disabled = true;
+        let exists = false;
         try {
             const saved = await api("PUT", `${this.kind}/files/${encodeURIComponent(filename)}`, {interaction: this.output(), overwrite});
             this.existing = true;
@@ -632,12 +637,15 @@ export class Builder {
             this.render();
             this.onSaved(saved.filename);
         } catch (error) {
-            if (error.status === 409 && error.data.exists && !overwrite) {
-                if (await confirmDialog(`${filename}.json already exists. Overwrite it?`, "Overwrite", true)) return this.save(true);
-                return;
+            exists = error.status === 409 && error.data.exists && !overwrite;
+            if (!exists) {
+                this.errors = error.data.errors ?? [error.message];
+                this.refreshSide();
             }
-            this.errors = error.data.errors ?? [error.message];
-            this.refreshSide();
+        } finally {
+            this.saving = false;
+            this.saveButton.disabled = false;
         }
+        if (exists && await confirmDialog(`${filename}.json already exists. Overwrite it?`, "Overwrite", true)) await this.save(true);
     }
 }
