@@ -10,6 +10,18 @@ const MAX_STRING_LENGTH = 6000;
 const isSubcommand = type => type === T.SUB_COMMAND || type === T.SUB_COMMAND_GROUP;
 const isNumeric = type => type === T.INTEGER || type === T.NUMBER;
 const clone = value => JSON.parse(JSON.stringify(value));
+const byRequiredFirst = (a, b) => Number(!!b.required) - Number(!!a.required);
+
+// Discord wants the required options first: the form keeps the order they are saved in
+function sortRequiredFirst(options) {
+    if (options.some(option => isSubcommand(option.type))) return;
+    options.splice(0, options.length, ...[...options].sort(byRequiredFirst));
+}
+
+function sortEveryLevel(options = []) {
+    sortRequiredFirst(options);
+    for (const option of options) sortEveryLevel(option.options);
+}
 
 // Same rule as InteractionRules.allowedOptionTypes, from the other options of the level
 function allowedTypes(parent, others, allTypes) {
@@ -72,6 +84,7 @@ export class Builder {
             if (opening !== this.opening) return; // Closed, and another file opened meanwhile
             this.original = original;
             this.cmd = clone(original);
+            sortEveryLevel(this.cmd.options);
             this.filename = filename.replace(/\.json$/i, "");
         } else {
             this.cmd = kind === "commands"
@@ -237,7 +250,7 @@ export class Builder {
         });
         // Discord wants the required options first, as the CLI generator sorts them
         if (cleaned.some(option => isSubcommand(option.type))) return cleaned;
-        return [...cleaned].sort((a, b) => Number(!!b.required) - Number(!!a.required));
+        return [...cleaned].sort(byRequiredFirst);
     }
 
     // ---- Rendering ----
@@ -503,6 +516,12 @@ export class Builder {
             options.splice(index + offset, 0, moved);
             this.render();
         };
+        // A required option cannot go below an optional one, nor an optional one above a required one
+        const canMove = offset => {
+            const other = options[index + offset];
+            return !!other && (isSubcommand(option.type) || !!other.required === !!option.required);
+        };
+        const moveTitle = offset => options[index + offset] && !canMove(offset) ? "Required options always come first" : undefined;
 
         const header = h("div", {class: "option-head"},
             h("select", {
@@ -511,8 +530,8 @@ export class Builder {
             }, allowed.map(type => h("option", {value: type, selected: type === option.type ? "selected" : null}, this.optionTypeNames[type]))),
             h("span", {class: "option-name mono"}, option.name || "(no name)"),
             h("div", {class: "actions"},
-                h("button", {type: "button", class: "ghost small", disabled: index === 0, onclick: () => move(-1), "aria-label": "Move up"}, "↑"),
-                h("button", {type: "button", class: "ghost small", disabled: index === options.length - 1, onclick: () => move(1), "aria-label": "Move down"}, "↓"),
+                h("button", {type: "button", class: "ghost small", disabled: !canMove(-1), title: moveTitle(-1), onclick: () => move(-1), "aria-label": "Move up"}, "↑"),
+                h("button", {type: "button", class: "ghost small", disabled: !canMove(1), title: moveTitle(1), onclick: () => move(1), "aria-label": "Move down"}, "↓"),
                 h("button", {type: "button", class: "ghost small danger-text", onclick: () => { options.splice(index, 1); this.render(); }}, "Remove"),
             ),
         );
@@ -528,7 +547,11 @@ export class Builder {
             body = h("div", {class: "nested"}, this.optionList(option.options, option.type));
         } else {
             body = h("div", {class: "option-extra"},
-                this.checkbox("Required", !!option.required, checked => { option.required = checked; this.refreshSide(); }),
+                this.checkbox("Required", !!option.required, checked => {
+                    option.required = checked;
+                    sortRequiredFirst(options);
+                    this.render();
+                }),
                 this.typeFields(option),
             );
         }
