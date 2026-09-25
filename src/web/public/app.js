@@ -232,7 +232,7 @@ function renderActions() {
     $("#update-hint").textContent = UPDATE_HINTS[state.scope];
     replace($("#deploy-actions"),
         button(`Deploy${count(files.deploy)}`, () => deploy(files.deploy), {disabled: !files.deploy.length}),
-        button(`Delete file${count(removable)}`, () => deleteFiles(removable), {disabled: !removable.length, tone: "ghost"}),
+        button(`Delete file${count(removable)}`, () => deleteFiles(removable), {disabled: !removable.length, tone: "danger"}),
         button(`New ${KIND_LABELS[state.kind]}`, () => openEditor(null), {tone: "success"}),
     );
     replace($("#update-actions"),
