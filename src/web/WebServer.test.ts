@@ -20,6 +20,7 @@ let origin: string;
 let url: string;
 let calls: RestCall[];
 let remote: Record<string, unknown[]>;
+let guildListings: number;
 let postGate: Promise<void> | null; // Holds the POST requests to Discord until it resolves
 
 function mockRest(manager: CommandManager | ContextMenuManager) {
@@ -65,6 +66,7 @@ beforeEach(async () => {
     calls = [];
     remote = {};
     postGate = null;
+    guildListings = 0;
 
     server = new WebServer({
         token: "token",
@@ -74,7 +76,10 @@ beforeEach(async () => {
             [FolderName.SLASH_COMMANDS]: mockRest(new CommandManager("123456789012345678", "token")),
             [FolderName.CONTEXT_MENU]: mockRest(new ContextMenuManager("123456789012345678", "token")),
         },
-        fetchGuilds: async () => guilds,
+        fetchGuilds: async () => {
+            guildListings++;
+            return guilds;
+        },
     });
     url = await server.start();
     origin = server.origin();
@@ -188,6 +193,16 @@ describe("WebServer API", () => {
 
         assert.deepEqual(calls.filter(call => call.method === "delete").map(call => call.route), [`/applications/123456789012345678/commands/${C1}`]);
         assert.equal((await readCommand("ping.json")).id, undefined);
+    });
+
+    it("lists the guilds once for the refreshes of All guilds that follow", async () => {
+        await json("GET", "/api/commands/remote?scope=all");
+        await json("GET", "/api/commands/remote?scope=all");
+        await json("GET", "/api/commands/count");
+        assert.equal(guildListings, 1);
+
+        await json("GET", "/api/guilds");
+        assert.equal(guildListings, 2);
     });
 
     it("counts the interactions of each guild", async () => {

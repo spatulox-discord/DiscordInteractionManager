@@ -32,6 +32,8 @@ import {HttpError, readJson, RouteContext, Router, sendJson} from "./Router";
 export const DEFAULT_PORT = 3789;
 const MAX_BODY_BYTES = 1024 * 1024;
 const TOKEN_HEADER = "x-dim-token";
+// The All guilds scope needs the guilds at each refresh: they are listed again after this delay
+const GUILDS_TTL_MS = 60_000;
 
 // Next to the bundled dist/MainCLI.js, or next to this file when run with tsx
 const PUBLIC_FOLDER = path.join(__dirname, "public");
@@ -66,6 +68,7 @@ export class WebServer {
     private readonly managers: Record<FolderName, BaseInteractionManager>;
     private readonly fetchGuilds: () => Promise<Guild[]>;
     private guilds: Guild[] = [];
+    private guildsListedAt = 0;
     private port = 0;
 
     constructor(private readonly options: WebServerOptions) {
@@ -187,7 +190,7 @@ export class WebServer {
         this.router
             .add("GET", "/api/app", async () => this.app())
             .add("GET", "/api/meta", async () => WebServer.meta())
-            .add("GET", "/api/guilds", async () => (await this.loadGuilds()).map(({id, name}) => ({id, name})))
+            .add("GET", "/api/guilds", async () => (await this.loadGuilds(true)).map(({id, name}) => ({id, name})))
             .add("GET", "/api/:kind/local", context => this.listLocal(context))
             .add("GET", "/api/:kind/remote", context => this.listRemote(context))
             .add("GET", "/api/:kind/count", context => this.count(context))
@@ -234,9 +237,14 @@ export class WebServer {
         return manager;
     }
 
-    private async loadGuilds(): Promise<Guild[]> {
+    /**
+     * @param fresh true to list them again even when the last listing is recent
+     */
+    private async loadGuilds(fresh = false): Promise<Guild[]> {
+        if (!fresh && Date.now() - this.guildsListedAt < GUILDS_TTL_MS) return this.guilds;
         try {
             this.guilds = await this.fetchGuilds();
+            this.guildsListedAt = Date.now();
         } catch (error) {
             throw new HttpError(502, `Cannot list the guilds of the bot: ${(error as Error).message}`);
         }
@@ -246,7 +254,8 @@ export class WebServer {
     // The guild, from the last listing when possible, so the messages show its name
     private async guild(id: unknown): Promise<Guild> {
         if (typeof id !== "string" || !DiscordRegex.GUILD_ID.test(id)) throw new HttpError(400, "A guild ID is required");
-        const known = this.guilds.find(guild => guild.id === id) ?? (await this.loadGuilds()).find(guild => guild.id === id);
+        // A guild joined since the last listing is found by listing them again
+        const known = this.guilds.find(guild => guild.id === id) ?? (await this.loadGuilds(true)).find(guild => guild.id === id);
         if (!known) throw new HttpError(404, `The bot is not in the guild ${id}`);
         return known;
     }
