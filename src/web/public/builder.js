@@ -477,7 +477,9 @@ export class Builder {
 
     optionList(options, parentType) {
         const add = () => {
-            const type = allowedTypes(parentType, options, this.allTypes)[0];
+            // A text option when it is allowed, the most common one, else a subcommand
+            const allowed = allowedTypes(parentType, options, this.allTypes);
+            const type = allowed.includes(T.STRING) ? T.STRING : allowed[0];
             options.push(isSubcommand(type) ? {type, name: "", description: "", options: []} : {type, name: "", description: "", required: false});
             this.render();
         };
