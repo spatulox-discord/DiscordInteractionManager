@@ -270,6 +270,7 @@ let loading = 0;
 
 async function refresh() {
     $("#page-folder").textContent = state.app?.folders[state.kind] ?? "";
+    const current = ++loading; // Also drops the refresh still running when no guild is chosen
     if (state.scope === "guild" && !state.guildId) {
         state.local = [];
         state.addable = [];
@@ -277,7 +278,6 @@ async function refresh() {
         renderTables();
         return;
     }
-    const current = ++loading;
     for (const id of ["#deploy-table", "#update-table", "#remote-table"]) replace($(id), h("p", {class: "empty"}, "Loading…"));
 
     const guildScope = state.scope === "guild";
