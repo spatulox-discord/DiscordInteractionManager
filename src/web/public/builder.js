@@ -391,9 +391,10 @@ export class Builder {
         return this.section("Interaction",
             isSlash ? null : h("div", {class: "field"},
                 h("span", {class: "label"}, "Type"),
-                h("div", {class: "segmented"}, [[2, "User"], [3, "Message"]].map(([type, label]) => h("button", {
+                h("div", {class: "segmented", role: "group", "aria-label": "Type"}, [[2, "User"], [3, "Message"]].map(([type, label]) => h("button", {
                     type: "button",
                     class: cmd.type === type ? "active" : "",
+                    "aria-pressed": String(cmd.type === type),
                     disabled: deployed && cmd.type !== type,
                     title: deployed ? "Delete it from Discord to change its type" : undefined,
                     onclick: () => { cmd.type = type; this.render(); },
@@ -463,9 +464,10 @@ export class Builder {
         const deployed = this.deployed();
         const locked = deployed.length > 0;
 
-        const scopes = h("div", {class: "segmented"}, [["global", "Global"], ["guild", "Guild specific"]].map(([scope, label]) => h("button", {
+        const scopes = h("div", {class: "segmented", role: "group", "aria-label": "Scope"}, [["global", "Global"], ["guild", "Guild specific"]].map(([scope, label]) => h("button", {
             type: "button",
             class: cmd.command_scope === scope ? "active" : "",
+            "aria-pressed": String(cmd.command_scope === scope),
             disabled: locked && cmd.command_scope !== scope,
             title: locked ? "Delete it from Discord to change its scope" : undefined,
             onclick: () => {

@@ -482,7 +482,11 @@ function renderNavigation() {
         if (current) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
     }
     $("#page-title").textContent = KIND_TITLES[state.kind];
-    $$("[data-scope]").forEach(tab => tab.classList.toggle("active", tab.dataset.scope === state.scope));
+    for (const tab of $$("[data-scope]")) {
+        const current = tab.dataset.scope === state.scope;
+        tab.classList.toggle("active", current);
+        tab.setAttribute("aria-pressed", String(current));
+    }
     $(".guild-picker").hidden = state.scope !== "guild";
 }
 
