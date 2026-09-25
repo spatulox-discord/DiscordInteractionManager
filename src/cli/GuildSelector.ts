@@ -35,7 +35,7 @@ export class GuildSelector {
         }
     }
 
-    private async fetchAllGuilds(): Promise<RESTAPIPartialCurrentUserGuild[]> {
+    async fetchAllGuilds(): Promise<RESTAPIPartialCurrentUserGuild[]> {
         const guilds: RESTAPIPartialCurrentUserGuild[] = [];
         let after: string | undefined;
         while (true) {

@@ -14,7 +14,7 @@ export class GlobalInteractionCLI extends ScopeInteractionCLI {
         { label: "Deploy local", action: () => this.handleDeploy(null) },
         { label: "Update", action: () => this.handleUpdate(null) },
         { label: "Delete", action: () => this.handleDelete(null) },
-        { label: `Save deployed ${this.manager.folderPath} into local files`, action: async () => this.saveToLocalFiles(await this.manager.list()) },
+        { label: `Save deployed ${this.manager.folderPath} into local files`, action: async () => this.manager.saveToGeneratedFiles(await this.manager.list()) },
         { label: 'Back', action: () => this.goBack() },
     ];
 }

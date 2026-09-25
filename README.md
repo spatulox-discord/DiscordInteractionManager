@@ -1,6 +1,8 @@
 # Discord Interaction Manager
 [![CI](https://github.com/spatulox-discord/DiscordInteractionManager/actions/workflows/ci.yml/badge.svg)](https://github.com/spatulox-discord/DiscordInteractionManager/actions/workflows/ci.yml)
 
+Check the [WIKI](https://github.com/spatulox-discord/DiscordInteractionManager/wiki/) !
+
 Are you always fed up with creating interactions by hand or developing your own tools to deploy, update, or delete a slash command or a context menu ?
 Same thing when listing interactions, because it’s a mess with specific guild interactions and global interaction ? You never know which one is where or which permission it have ? This tool is made for you !
 Discord Interaction Manager is a lightweight CLI tool to manage Discord bot interactions (slash commands, context menus) in under 10 seconds. Generate, deploy, list, update, delete, your interactions with an interactive terminal interface.
@@ -69,13 +71,32 @@ You will be greet by a CLI :
 ════════════════════════════════════════
 1. Manage Interactions
 2. Generate Files
-3. Help
-4. Exit
+3. Open Web UI
+4. Help
+5. Exit
 ════════════════════════════════════════
 Choose an option (or "exit" to quit):
 ```
 
 Type the number of an option, or `exit` in any menu to quit.
+
+## Web UI
+Prefer clicking to typing numbers ? Start the web UI instead of the CLI :
+```bash
+npx dim web
+```
+It opens your browser on a local page (or use "Open Web UI" in the menu of the CLI) where you can :
+- List the local files and the interactions deployed on Discord, in the Global, Guild or All guilds scope, and see their details. The local files are split in two lists : "To deploy" (not deployed in the scope yet, and in a guild the guild files that do not target it) and "To update" (deployed, to push the edits of their file)
+- Deploy, update and delete them (with the same rules as the CLI, and a confirmation naming them). In All guilds, "Deploy" deploys each file to the guilds still pending in it
+- Create ("New slash command", "New context menu") and edit ("Edit") interaction files in a window over the list, with a visual builder : permissions, contexts, scope and guilds (searched by name or ID), options and subcommands, choices, with a live JSON preview. The file is checked before it is saved, and each error shows the path of its field (e.g. `options[0].choices[1].value`). As in the Discord settings, a bar at the bottom shows the unsaved changes (Save Changes, Reset), and the window cannot be closed until they are saved or reset
+
+Options :
+- `--port <port>` : port of the page (default `3789`, a free one is used when it is taken)
+- `--no-open` : only print the URL, without opening the browser
+
+> The page is only served on `127.0.0.1`, and only the URL printed in the terminal (it holds a session token) gives access to it : other websites open in your browser cannot use it. It stops with the command (Ctrl+C) or when you exit the CLI.
+
+> The builder keeps the IDs of an existing file : it cannot change the scope of a deployed interaction, nor remove a guild it is deployed in. Delete it from Discord first.
 
 # How it works
 ## Creating an interaction

@@ -22,7 +22,7 @@ export class GuildInteractionCLI extends ScopeInteractionCLI {
         { label: `Add a guild ${this.manager.folderPath} to this guild`, action: () => this.handleAdd() },
         { label: "Update in this guild", action: () => this.handleUpdate(this.guild) },
         { label: "Delete from this guild", action: () => this.handleDelete(this.guild) },
-        { label: `Save this guild's ${this.manager.folderPath} into local files`, action: async () => this.saveToLocalFiles(await this.manager.listGuild(this.guild.id), this.guild.id) },
+        { label: `Save this guild's ${this.manager.folderPath} into local files`, action: async () => this.manager.saveToGeneratedFiles(await this.manager.listGuild(this.guild.id), this.guild.id) },
         { label: "Change guild", action: () => this.changeGuild() },
         { label: 'Back', action: () => this.goBack() },
     ];

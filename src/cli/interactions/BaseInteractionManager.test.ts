@@ -7,6 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import {CommandManager} from "./InteractionManager";
 import {ALL_GUILDS, Listing} from "../enum/Listing";
+import {InteractionPayload} from "./InteractionPayload";
+import {Log} from "../../utils/Log";
 
 // Guild and command IDs in the Discord format, since local files are validated
 const [G1, G2, G3] = ["111111111111111111", "222222222222222222", "333333333333333333"];
@@ -527,5 +529,44 @@ describe("BaseInteractionManager.listFromFile", () => {
         const commands = await manager.listFromFile(Listing.LOCAL);
 
         assert.deepEqual(commands.map(c => c.name), ["counterexample"]);
+    });
+});
+
+describe("BaseInteractionManager.saveToGeneratedFiles", () => {
+    it("saves the commands of a guild in their own folder", async () => {
+        mock.method(console, "info", () => {});
+        const raw = {id: C1, application_id: "app", version: "v1", type: 1, name: "ping", description: "Ping", guild_id: G1} as any;
+        const {manager} = createManager();
+
+        await manager.saveToGeneratedFiles([InteractionPayload.fromDiscord(raw)], G1);
+
+        const saved = JSON.parse(await fs.readFile(path.join(folder, "generated_commands", G1, "ping.json"), "utf8"));
+        assert.equal(saved.command_scope, "guild");
+        assert.deepEqual(saved.id, {[G1]: C1});
+    });
+});
+
+describe("BaseInteractionManager with captured logs", () => {
+    it("returns the invalid files, duplicates and Discord errors instead of printing them", async () => {
+        const log = mock.method(console, "log", () => {});
+        const table = mock.method(console, "table", () => {});
+        const error = mock.method(console, "error", () => {});
+        await writeCommand("broken.json", {name: "broken", type: 1});
+        await writeCommand("ping.json", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+        await writeCommand("ping2.json", {name: "ping", type: 1, description: "Ping", command_scope: "global"});
+        const {manager} = createManager(() => { throw new Error("Missing Access"); });
+
+        const {result, messages} = await Log.capture(async () => {
+            const commands = await manager.listFromFile(Listing.LOCAL, undefined, false);
+            await manager.deploy(commands.slice(0, 1));
+            return commands;
+        });
+
+        assert.deepEqual(result.map(cmd => cmd.filename), ["ping.json", "ping2.json"]);
+        assert.deepEqual(messages.map(m => m.level), ["error", "warn", "info", "error", "info"]);
+        assert.match(messages[0]!.message, /Invalid interaction file .*broken\.json/);
+        assert.match(messages[1]!.message, /ping\.json and ping2\.json both define/);
+        assert.match(messages[3]!.message, /Global: Missing Access/);
+        assert.equal(log.mock.callCount() + table.mock.callCount() + error.mock.callCount(), 0);
     });
 });

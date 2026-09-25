@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Discord Interaction Manager</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js"></script>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+    <div class="brand">
+        <img src="icon.svg" alt="" width="28" height="28">
+        <span>Discord Interaction Manager</span>
+    </div>
+    <nav class="nav" aria-label="Interactions">
+        <div class="nav-group">
+            <h2 class="nav-title">Interactions</h2>
+            <button type="button" class="nav-item" data-kind="commands">Slash commands</button>
+            <button type="button" class="nav-item" data-kind="context_menu">Context menus</button>
+        </div>
+    </nav>
+    <p id="bot" class="bot">Connecting…</p>
+</aside>
+
+<div class="page">
+<header class="page-head">
+    <h1 id="page-title"></h1>
+    <p id="page-folder" class="muted mono"></p>
+</header>
+
+<main>
+    <section id="interactions-view">
+        <div class="toolbar">
+            <div class="segmented" role="group" aria-label="Scope">
+                <button type="button" data-scope="global">Global</button>
+                <button type="button" data-scope="guild">Guild</button>
+                <button type="button" data-scope="all">All guilds</button>
+            </div>
+            <label class="guild-picker" hidden>
+                <span>Guild</span>
+                <select id="guild-select"></select>
+            </label>
+            <button type="button" id="refresh" class="ghost">Refresh</button>
+        </div>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2>To deploy</h2>
+                    <p id="deploy-hint" class="hint"></p>
+                </div>
+                <div class="actions" id="deploy-actions"></div>
+            </div>
+            <div id="deploy-table" class="table-wrap"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2>To update</h2>
+                    <p id="update-hint" class="hint"></p>
+                </div>
+                <div class="actions" id="update-actions"></div>
+            </div>
+            <div id="update-table" class="table-wrap"></div>
+        </section>
+
+        <hr class="separator">
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>On Discord</h2>
+                <div class="actions" id="remote-actions"></div>
+            </div>
+            <div id="remote-table" class="table-wrap"></div>
+        </section>
+    </section>
+
+    <section class="panel log-panel">
+        <div class="panel-head">
+            <h2>Log</h2>
+            <div class="actions"><button type="button" id="clear-log" class="ghost">Clear</button></div>
+        </div>
+        <ol id="log" class="log"></ol>
+    </section>
+</main>
+</div>
+</div>
+
+<aside id="details" class="drawer" role="dialog" aria-labelledby="details-title" hidden>
+    <div class="drawer-head">
+        <h2 id="details-title">Details</h2>
+        <button type="button" id="details-close" class="ghost" aria-label="Close">✕</button>
+    </div>
+    <div id="details-body" class="drawer-body"></div>
+</aside>
+
+<!-- Creates or edits a local file over the page, as the settings of Discord -->
+<dialog id="editor" class="editor-modal" aria-labelledby="editor-title">
+    <div class="editor-head">
+        <h2 id="editor-title">Edit</h2>
+        <button type="button" id="editor-close" class="ghost close" aria-label="Close">✕</button>
+    </div>
+    <div id="editor-body" class="editor-body"></div>
+</dialog>
+
+<dialog id="confirm">
+    <form method="dialog">
+        <p id="confirm-text"></p>
+        <div class="actions">
+            <button value="cancel" class="ghost">Cancel</button>
+            <button value="ok" id="confirm-ok">Confirm</button>
+        </div>
+    </form>
+</dialog>
+</body>
+</html>

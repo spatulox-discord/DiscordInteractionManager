@@ -11,9 +11,7 @@ import {
 } from "../type/InteractionType";
 import {InteractionGeneratorCLI} from "./InteractionGeneratorCLI";
 import {Utils} from "../utils/Utils";
-import {DiscordRegex} from "../../utils/DiscordRegex";
-
-type ChoiceLimits = Pick<CommandOption, "min_length" | "max_length" | "min_value" | "max_value">;
+import {ChoiceLimits, InteractionRules} from "../interactions/InteractionRules";
 
 export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
     protected getTitle(): string {
@@ -37,7 +35,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         console.log("📝 1/7 - Base");
         config.name = await this.input.requireInput(
             "Name (lowercase letters, digits, - _ ', 1-32 chars): ",
-            SlashCommandGeneratorCLI.isValidName
+            InteractionRules.isValidName
         );
         config.description = await this.requireText("Description (1-100 chars): ", 100);
         await this.nsfw(config)
@@ -79,27 +77,6 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         return await this.save(FolderName.SLASH_COMMANDS, config)
     }
 
-    static isValidName(name: string): boolean {
-        return DiscordRegex.COMMAND_NAME.test(name) && name === name.toLowerCase();
-    }
-
-    static allowedOptionTypes(parent: DiscordOptionType | undefined, siblings: CommandOption[]): DiscordOptionType[] {
-        const all = Object.values(DiscordOptionType).filter((v): v is DiscordOptionType => typeof v === 'number');
-        const isSubcommand = (type: DiscordOptionType) =>
-            type === DiscordOptionType.SUB_COMMAND || type === DiscordOptionType.SUB_COMMAND_GROUP;
-
-        if (parent === DiscordOptionType.SUB_COMMAND_GROUP) return [DiscordOptionType.SUB_COMMAND];
-        if (parent === DiscordOptionType.SUB_COMMAND) return all.filter(type => !isSubcommand(type));
-
-        const first = siblings[0];
-        if (!first) return all;
-        return all.filter(type => isSubcommand(type) === isSubcommand(first.type));
-    }
-
-    static sortRequiredFirst(options: CommandOption[]): CommandOption[] {
-        return [...options].sort((a, b) => Number(!!b.required) - Number(!!a.required));
-    }
-
     private async addOptions(parent?: DiscordOptionType): Promise<CommandOption[]> {
         const options: CommandOption[] = [];
 
@@ -110,7 +87,7 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         }
 
         while (true) {
-            const allowed = SlashCommandGeneratorCLI.allowedOptionTypes(parent, options);
+            const allowed = InteractionRules.allowedOptionTypes(parent, options);
             console.clear();
             console.log("🚀 Options type :");
             console.log("Valid options : " + allowed.map(type => `${type}.${DiscordOptionType[type]}`).join(', '));
@@ -128,13 +105,13 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
             }
             if (!await this.input.yesNoInput("Another option?")) break;
         }
-        return SlashCommandGeneratorCLI.sortRequiredFirst(options);
+        return InteractionRules.sortRequiredFirst(options);
     }
 
     private async buildOption(type: DiscordOptionType, usedNames: string[] = []): Promise<CommandOption> {
         const name = await this.input.requireInput(
             "Option name (lowercase letters, digits, - _ ', 1-32, unique): ",
-            val => SlashCommandGeneratorCLI.isValidName(val) && !usedNames.includes(val)
+            val => InteractionRules.isValidName(val) && !usedNames.includes(val)
         );
         const description = await this.requireText("Description (1-100): ", 100);
 
@@ -188,41 +165,15 @@ export class SlashCommandGeneratorCLI extends InteractionGeneratorCLI {
         return input.trim() ? Number(input) : undefined;
     }
 
-    // A choice outside the limits of its option could never be sent
-    static isValidChoiceValue(type: DiscordOptionType, value: string, limits: ChoiceLimits = {}): boolean {
-        if (type === DiscordOptionType.STRING) {
-            const [min, max] = this.choiceLengthRange(limits);
-            return value.length >= min && value.length <= max;
-        }
-        const num = Number(value);
-        if (!value.trim() || !Number.isFinite(num)) return false;
-        if (type === DiscordOptionType.INTEGER && !Number.isSafeInteger(num)) return false;
-        return (limits.min_value === undefined || num >= limits.min_value)
-            && (limits.max_value === undefined || num <= limits.max_value);
-    }
-
-    private static choiceLengthRange(limits: ChoiceLimits): [number, number] {
-        return [Math.max(1, limits.min_length ?? 1), Math.min(100, limits.max_length ?? 100)];
-    }
-
-    private static choiceValueHint(type: DiscordOptionType, limits: ChoiceLimits): string {
-        if (type === DiscordOptionType.STRING) return `${this.choiceLengthRange(limits).join("-")} chars`;
-        const range = [
-            limits.min_value !== undefined ? `≥ ${limits.min_value}` : "",
-            limits.max_value !== undefined ? `≤ ${limits.max_value}` : "",
-        ].filter(Boolean).join(", ");
-        return (type === DiscordOptionType.INTEGER ? "integer" : "number") + (range ? `, ${range}` : "");
-    }
-
     private async addChoices(type: DiscordOptionType, limits: ChoiceLimits = {}): Promise<Choice[] | undefined> {
         if (!await this.input.yesNoInput("Add choices (25 max)?")) return undefined;
 
-        const valueHint = SlashCommandGeneratorCLI.choiceValueHint(type, limits);
+        const valueHint = InteractionRules.choiceValueHint(type, limits);
         const choices: Choice[] = [];
         while (choices.length < 25) {
             const name = await this.requireText("Choice name (1-100, unique): ", 100, val => !choices.some(choice => choice.name === val));
             const value = await this.input.requireInput(`Choice value (${valueHint}, unique): `, val =>
-                SlashCommandGeneratorCLI.isValidChoiceValue(type, val, limits)
+                InteractionRules.isValidChoiceValue(type, val, limits)
                 && !choices.some(choice => String(choice.value) === (type === DiscordOptionType.STRING ? val : String(Number(val))))
             );
             choices.push({ name, value: type === DiscordOptionType.STRING ? value : Number(value) });

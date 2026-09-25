@@ -7,8 +7,6 @@ import {Env} from "../../Env";
 import {Interaction} from "../type/InteractionType";
 import {Listing} from "../enum/Listing";
 import {Utils} from "../utils/Utils";
-import {FileManager} from "../../utils/FileManager";
-import {PathUtils} from "../../utils/PathUtils";
 
 /**
  * Actions shared by the Global and Guild menus. A null guild means global interactions.
@@ -104,22 +102,6 @@ export abstract class ScopeInteractionCLI extends BaseCLI {
                 console.log('\n' + InteractionDetails.format(commands[i]!).join('\n'));
             }
             console.log('');
-        }
-    }
-
-    /**
-     * Saves interactions fetched from Discord into the generated folder.
-     * @param subFolder Folder inside the generated folder, so guild interactions never overwrite global ones
-     */
-    protected async saveToLocalFiles(commands: Interaction[], subFolder?: string): Promise<void> {
-        const folder = PathUtils.createPathFolder("generated_" + this.manager.folderPath) + (subFolder ? `/${subFolder}` : "");
-        const usedFilenames = new Set<string>();
-        for (const cmd of commands) {
-            // A user and a message context menu can share the same name
-            let filename = FileManager.toSafeFilename(cmd.name);
-            if (usedFilenames.has(filename.toLowerCase())) filename = `${filename}_${cmd.type}`;
-            usedFilenames.add(filename.toLowerCase());
-            await FileManager.writeJsonFile(folder, filename, cmd)
         }
     }
 }

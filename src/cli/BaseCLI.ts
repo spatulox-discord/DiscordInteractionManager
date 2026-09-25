@@ -102,6 +102,9 @@ export abstract class BaseCLI {
         console.log('  • Type "exit" in any menu to quit');
 
         console.log('');
+        console.log('🌐 Web UI: "Open Web UI" in the main menu, or run "npx dim web" to use it instead of the CLI');
+
+        console.log('');
         console.log('🔗 Wiki: https://github.com/spatulox-discord/DiscordInteractionManager/wiki');
         console.log('🔗 Bugs: https://github.com/spatulox-discord/DiscordInteractionManager/issues')
         console.log('═'.repeat(80));

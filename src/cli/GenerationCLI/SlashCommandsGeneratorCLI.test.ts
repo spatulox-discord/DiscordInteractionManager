@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {SlashCommandGeneratorCLI} from "./SlashCommandsGeneratorCLI";
 import {GuildSelector} from "../GuildSelector";
-import {CommandOption, DiscordOptionType, InteractionContextType} from "../type/InteractionType";
+import {DiscordOptionType, InteractionContextType} from "../type/InteractionType";
 
 function scripted(answers: string[]): any {
     const generator = new SlashCommandGeneratorCLI();
@@ -22,40 +22,7 @@ beforeEach(() => {
     mock.method(console, "clear", () => {});
 });
 
-describe("SlashCommandGeneratorCLI.isValidName", () => {
-    it("accepts lowercase unicode names", () => {
-        for (const name of ["ping", "liber-thé", "l'heure", "ping_2", "日本"]) {
-            assert.equal(SlashCommandGeneratorCLI.isValidName(name), true, name);
-        }
-    });
-
-    it("rejects uppercase, spaces and too long names", () => {
-        for (const name of ["", "Ping", "LIBER-THÉ", "my command", "a".repeat(33), "ping!"]) {
-            assert.equal(SlashCommandGeneratorCLI.isValidName(name), false, name);
-        }
-    });
-});
-
 describe("SlashCommandGeneratorCLI choices", () => {
-    it("validates choice values against the option type", () => {
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.STRING, "abc"), true);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.INTEGER, "42"), true);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.INTEGER, "4.2"), false);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.INTEGER, "abc"), false);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.NUMBER, "4.2"), true);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(DiscordOptionType.NUMBER, " "), false);
-    });
-
-    it("keeps choice values within the limits of the option", () => {
-        const {INTEGER, NUMBER, STRING} = DiscordOptionType;
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(INTEGER, "5", {min_value: 1, max_value: 10}), true);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(INTEGER, "0", {min_value: 1}), false);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(NUMBER, "10.5", {max_value: 10}), false);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "ab", {min_length: 3}), false);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "abcd", {max_length: 3}), false);
-        assert.equal(SlashCommandGeneratorCLI.isValidChoiceValue(STRING, "abc", {min_length: 3, max_length: 3}), true);
-    });
-
     it("asks again for a choice name or value already used", async () => {
         const answers = ["y", "One", "1", "y", "One", "Two", "1", "01", "2", "n"];
         assert.deepEqual(await scripted(answers).addChoices(DiscordOptionType.INTEGER), [
@@ -139,29 +106,6 @@ describe("SlashCommandGeneratorCLI numeric autocomplete", () => {
 });
 
 describe("SlashCommandGeneratorCLI options rules", () => {
-    const {SUB_COMMAND, SUB_COMMAND_GROUP, STRING, USER} = DiscordOptionType;
-    const option = (type: DiscordOptionType, required?: boolean): CommandOption => ({type, name: `o${type}`, description: "d", required});
-
-    it("only allows subcommands inside a group", () => {
-        assert.deepEqual(SlashCommandGeneratorCLI.allowedOptionTypes(SUB_COMMAND_GROUP, []), [SUB_COMMAND]);
-    });
-
-    it("never allows subcommands inside a subcommand", () => {
-        const allowed = SlashCommandGeneratorCLI.allowedOptionTypes(SUB_COMMAND, []);
-        assert.equal(allowed.includes(SUB_COMMAND) || allowed.includes(SUB_COMMAND_GROUP), false);
-        assert.equal(allowed.includes(STRING), true);
-    });
-
-    it("does not mix subcommands and regular options at the same level", () => {
-        assert.deepEqual(SlashCommandGeneratorCLI.allowedOptionTypes(undefined, [option(SUB_COMMAND)]), [SUB_COMMAND, SUB_COMMAND_GROUP]);
-        assert.equal(SlashCommandGeneratorCLI.allowedOptionTypes(undefined, [option(STRING)]).includes(SUB_COMMAND), false);
-    });
-
-    it("puts required options first", () => {
-        const sorted = SlashCommandGeneratorCLI.sortRequiredFirst([option(STRING, false), option(USER, true)]);
-        assert.deepEqual(sorted.map(o => o.required), [true, false]);
-    });
-
     it("builds a valid subcommand tree", async () => {
         const generator = scripted([
             "y", "1", "sub", "Sub",
