@@ -126,6 +126,8 @@ p { margin: 0; }
 .page { min-width: 0; }
 .page-head { max-width: 1400px; margin: 0 auto; padding: 20px 20px 0; }
 .page-head h1 { font-size: 20px; }
+.page-head p { margin-top: 2px; overflow-wrap: anywhere; }
+.panel-head .hint { font-weight: 400; }
 
 main { max-width: 1400px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
 #interactions-view { display: grid; gap: 16px; }

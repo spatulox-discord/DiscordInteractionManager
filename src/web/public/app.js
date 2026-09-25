@@ -9,11 +9,12 @@ const state = {
     kind: "commands",
     scope: "global",
     guildId: "",
-    localMode: "targeting", // or "addable": guild files that do not target the guild yet
     includeGlobal: false,
     local: [],
+    addable: [], // Guild files that do not target the chosen guild yet
     remote: [],
-    selectedLocal: new Set(),
+    selectedDeploy: new Set(),
+    selectedUpdate: new Set(),
     selectedRemote: new Set(),
 };
 
@@ -60,17 +61,55 @@ function hasAnyId(cmd) {
     return cmd.command_scope === "global" ? !!cmd.id : deployedGuilds(cmd).length > 0;
 }
 
-function localStatus(cmd) {
-    if (state.localMode === "addable") return badge("Not in this guild", "muted");
-    if (cmd.command_scope === "global") return cmd.id ? badge("Deployed", "ok", cmd.id) : badge("Not deployed", "muted");
-    const targets = Object.keys(cmd.id ?? {});
-    const deployed = deployedGuilds(cmd);
-    if (state.scope === "guild") {
-        return cmd.id?.[state.guildId] ? badge("Deployed", "ok", cmd.id[state.guildId]) : badge("Pending", "warn", "Deploy it to this guild");
+// Guilds of a guild file that it is not deployed in yet
+function pendingGuilds(cmd) {
+    return cmd.command_scope === "guild" ? Object.entries(cmd.id ?? {}).filter(([, id]) => !id).map(([guildId]) => guildId) : [];
+}
+
+/**
+ * The local files split by what they need in the current scope:
+ * "deploy" (not deployed yet, or guild files not targeting the chosen guild) and "update" (deployed).
+ * In All guilds, a file deployed in some of its guilds is in both.
+ */
+function splitLocalFiles() {
+    const {local, scope, guildId} = state;
+    if (scope === "global") {
+        return {deploy: local.filter(cmd => !cmd.id), update: local.filter(cmd => cmd.id)};
     }
+    if (scope === "guild") {
+        // The addable listing also has the files that target the guild without being deployed in it
+        const targeting = new Set(local.map(cmd => cmd.filename));
+        const addable = state.addable.filter(cmd => !targeting.has(cmd.filename)).map(cmd => ({...cmd, addable: true}));
+        return {
+            deploy: [...local.filter(cmd => !cmd.id?.[guildId]), ...addable],
+            update: local.filter(cmd => cmd.id?.[guildId]),
+        };
+    }
+    return {
+        deploy: local.filter(cmd => pendingGuilds(cmd).length > 0 || Object.keys(cmd.id ?? {}).length === 0),
+        update: local.filter(cmd => deployedGuilds(cmd).length > 0),
+    };
+}
+
+// A file to deploy that has no guild yet cannot be deployed from All guilds
+const canDeploy = cmd => cmd.command_scope === "global" || cmd.addable || state.scope === "guild" || pendingGuilds(cmd).length > 0;
+
+function deployStatus(cmd) {
+    if (cmd.addable) return badge("Adds this guild", "info", "This guild is added to the file when it is deployed");
+    if (cmd.command_scope === "global") return badge("Not deployed", "muted");
+    if (state.scope === "guild") return badge("Pending", "warn", "Not deployed in this guild yet");
+    const pending = pendingGuilds(cmd);
+    if (pending.length === 0) return badge("No guild", "muted", "Choose its guilds with Edit");
+    return badge(`Pending in ${pending.length} guild${pending.length > 1 ? "s" : ""}`, "warn", pending.map(guildName).join("\n"));
+}
+
+function updateStatus(cmd) {
+    if (cmd.command_scope === "global") return badge("Deployed", "ok", cmd.id);
+    if (state.scope === "guild") return badge("Deployed", "ok", cmd.id[state.guildId]);
+    const targets = Object.keys(cmd.id);
     const title = targets.map(id => `${guildName(id)}: ${cmd.id[id] ?? "pending"}`).join("\n");
-    if (targets.length === 0) return badge("No guild", "muted", "Add it to a guild from the Guild scope");
-    return badge(`${deployed.length}/${targets.length} guilds`, deployed.length === targets.length ? "ok" : "warn", title);
+    const deployed = deployedGuilds(cmd).length;
+    return badge(`Deployed in ${deployed}/${targets.length} guilds`, deployed === targets.length ? "ok" : "warn", title);
 }
 
 function badge(text, tone, title) {
@@ -119,10 +158,10 @@ const typeColumn = {label: "Type", value: row => typeLabel(row.type)};
 const descriptionColumn = {label: "Description", class: "wide", value: row => row.description ?? ""};
 const permissionsColumn = {label: "Permissions", value: row => row.permissions};
 
-function localColumns() {
+function localColumns(status) {
     return [
         nameColumn, typeColumn, descriptionColumn, permissionsColumn,
-        {label: "Status", value: localStatus},
+        {label: "Status", value: status},
         {label: "File", class: "mono", value: row => row.filename},
         {label: "", value: row => h("button", {type: "button", class: "ghost small", onclick: () => openEditor(row.filename)}, "Edit")},
     ];
@@ -144,19 +183,36 @@ function remoteColumns() {
 }
 
 function renderTables() {
-    const local = state.local.map(cmd => ({...cmd, rowKey: cmd.filename}));
+    const withKey = cmd => ({...cmd, rowKey: cmd.filename});
+    const {deploy, update} = splitLocalFiles();
     const remote = state.remote.map(cmd => ({...cmd, rowKey: `${cmd.command_scope}:${cmd.key}`}));
     // Global interactions listed in a guild cannot be deleted from it
     const remoteSelectable = row => state.scope !== "guild" || row.command_scope === "guild";
 
-    replace($("#local-table"), table(localColumns(), local, state.selectedLocal, () => true));
+    replace($("#deploy-table"), table(localColumns(deployStatus), deploy.map(withKey), state.selectedDeploy, canDeploy));
+    replace($("#update-table"), table(localColumns(updateStatus), update.map(withKey), state.selectedUpdate, () => true));
     replace($("#remote-table"), table(remoteColumns(), remote, state.selectedRemote, remoteSelectable));
     renderActions();
 }
 
-function selectedLocal() {
-    return state.local.filter(cmd => state.selectedLocal.has(cmd.filename));
+function selectedFiles() {
+    const {deploy, update} = splitLocalFiles();
+    return {
+        deploy: deploy.filter(cmd => state.selectedDeploy.has(cmd.filename) && canDeploy(cmd)),
+        update: update.filter(cmd => state.selectedUpdate.has(cmd.filename)),
+    };
 }
+
+const DEPLOY_HINTS = {
+    global: "Global files not deployed yet",
+    guild: "Files not deployed in this guild yet, and the guild files that do not target it",
+    all: "Guild files still pending in some of their guilds: they are deployed to these guilds",
+};
+const UPDATE_HINTS = {
+    global: "Deployed: push the edits of their file to Discord",
+    guild: "Deployed in this guild: push the edits of their file to Discord",
+    all: "Deployed in at least one guild: updated in every guild they are deployed in",
+};
 
 function selectedRemote() {
     return state.remote.filter(cmd => state.selectedRemote.has(`${cmd.command_scope}:${cmd.key}`));
@@ -167,33 +223,21 @@ function button(label, onclick, {disabled = false, tone = ""} = {}) {
 }
 
 function renderActions() {
-    const local = selectedLocal();
+    const files = selectedFiles();
     const remote = selectedRemote();
-    const toDeploy = local.filter(cmd => !isDeployed(cmd));
-    const toUpdate = local.filter(isDeployed);
-    const removable = local.filter(cmd => !hasAnyId(cmd));
+    const removable = files.deploy.filter(cmd => !cmd.addable && !hasAnyId(cmd));
     const count = list => list.length ? ` (${list.length})` : "";
 
-    const localActions = [];
-    if (state.scope === "guild") {
-        localActions.push(h("div", {class: "segmented small"},
-            ["targeting", "addable"].map(mode => h("button", {
-                type: "button",
-                class: state.localMode === mode ? "active" : "",
-                onclick: () => { state.localMode = mode; refresh(); },
-            }, mode === "targeting" ? "Files of this guild" : "Other guild files"))));
-    }
-    if (state.localMode === "addable" && state.scope === "guild") {
-        localActions.push(button(`Add to this guild${count(local)}`, () => deploy(local, true), {disabled: !local.length}));
-    } else {
-        if (state.scope !== "all") {
-            localActions.push(button(`Deploy${count(toDeploy)}`, () => deploy(toDeploy, false), {disabled: !toDeploy.length}));
-        }
-        localActions.push(button(state.scope === "all" ? `Update in all their guilds${count(toUpdate)}` : `Update${count(toUpdate)}`, () => update(toUpdate), {disabled: !toUpdate.length}));
-        localActions.push(button(`Delete file${count(removable)}`, () => deleteFiles(removable), {disabled: !removable.length, tone: "ghost"}));
-    }
-    localActions.push(button(`New ${KIND_LABELS[state.kind]}`, () => openEditor(null), {tone: "success"}));
-    replace($("#local-actions"), localActions);
+    $("#deploy-hint").textContent = DEPLOY_HINTS[state.scope];
+    $("#update-hint").textContent = UPDATE_HINTS[state.scope];
+    replace($("#deploy-actions"),
+        button(`Deploy${count(files.deploy)}`, () => deploy(files.deploy), {disabled: !files.deploy.length}),
+        button(`Delete file${count(removable)}`, () => deleteFiles(removable), {disabled: !removable.length, tone: "ghost"}),
+        button(`New ${KIND_LABELS[state.kind]}`, () => openEditor(null), {tone: "success"}),
+    );
+    replace($("#update-actions"),
+        button(`${state.scope === "all" ? "Update in all their guilds" : "Update"}${count(files.update)}`, () => update(files.update), {disabled: !files.update.length}),
+    );
 
     const remoteActions = [];
     if (state.scope === "guild") {
@@ -225,27 +269,32 @@ function scopeQuery() {
 let loading = 0;
 
 async function refresh() {
+    $("#page-folder").textContent = state.app?.folders[state.kind] ?? "";
     if (state.scope === "guild" && !state.guildId) {
         state.local = [];
+        state.addable = [];
         state.remote = [];
         renderTables();
         return;
     }
     const current = ++loading;
-    for (const id of ["#local-table", "#remote-table"]) replace($(id), h("p", {class: "empty"}, "Loading…"));
-    $("#local-folder").textContent = state.app?.folders[state.kind] ?? "";
+    for (const id of ["#deploy-table", "#update-table", "#remote-table"]) replace($(id), h("p", {class: "empty"}, "Loading…"));
 
-    const listing = state.scope === "guild" && state.localMode === "addable" ? "&listing=addable" : "";
-    const available = state.scope === "guild" && state.includeGlobal ? "&available=true" : "";
-    const [local, remote] = await Promise.all([
-        api("GET", `${state.kind}/local?${scopeQuery()}${listing}`).catch(() => []),
+    const guildScope = state.scope === "guild";
+    const available = guildScope && state.includeGlobal ? "&available=true" : "";
+    const [local, addable, remote] = await Promise.all([
+        api("GET", `${state.kind}/local?${scopeQuery()}`).catch(() => []),
+        guildScope ? api("GET", `${state.kind}/local?${scopeQuery()}&listing=addable`).catch(() => []) : [],
         api("GET", `${state.kind}/remote?${scopeQuery()}${available}`).catch(() => []),
     ]);
     if (current !== loading) return; // A newer refresh is running
 
     state.local = local;
+    state.addable = addable;
     state.remote = remote;
-    keepExisting(state.selectedLocal, local.map(cmd => cmd.filename));
+    const filenames = [...local, ...addable].map(cmd => cmd.filename);
+    keepExisting(state.selectedDeploy, filenames);
+    keepExisting(state.selectedUpdate, filenames);
     keepExisting(state.selectedRemote, remote.map(cmd => `${cmd.command_scope}:${cmd.key}`));
     renderTables();
 }
@@ -260,10 +309,10 @@ function scopeBody() {
     return state.scope === "guild" ? {scope: "guild", guild: state.guildId} : {scope: state.scope};
 }
 
-function whereLabel() {
+function whereLabel(action) {
     if (state.scope === "global") return "globally";
     if (state.scope === "guild") return `in the guild "${guildName(state.guildId)}"`;
-    return "in every guild they are deployed in";
+    return action === "deploy" ? "to the guilds still pending in them" : "in every guild they are deployed in";
 }
 
 const names = list => list.map(cmd => cmd.name).join(", ");
@@ -280,14 +329,22 @@ async function run(action) {
     }
 }
 
-async function deploy(commands, add) {
-    if (!await confirmDialog(`Deploy ${names(commands)} ${whereLabel()}?`, "Deploy")) return;
-    state.selectedLocal.clear();
-    await run(() => api("POST", `${state.kind}/deploy`, {...scopeBody(), filenames: commands.map(cmd => cmd.filename), add}));
+// The guild files that do not target the guild yet are deployed apart, and the guild is added to them
+async function deploy(commands) {
+    if (!await confirmDialog(`Deploy ${names(commands)} ${whereLabel("deploy")}?`, "Deploy")) return;
+    state.selectedDeploy.clear();
+    const filenames = list => list.map(cmd => cmd.filename);
+    const pending = commands.filter(cmd => !cmd.addable);
+    const addable = commands.filter(cmd => cmd.addable);
+    await run(async () => {
+        if (pending.length) await api("POST", `${state.kind}/deploy`, {...scopeBody(), filenames: filenames(pending)});
+        if (addable.length) await api("POST", `${state.kind}/deploy`, {...scopeBody(), filenames: filenames(addable), add: true});
+    });
 }
 
 async function update(commands) {
-    if (!await confirmDialog(`Update ${names(commands)} ${whereLabel()} from their local files?`, "Update")) return;
+    if (!await confirmDialog(`Update ${names(commands)} ${whereLabel("update")} from their local files?`, "Update")) return;
+    state.selectedUpdate.clear();
     await run(() => api("POST", `${state.kind}/update`, {...scopeBody(), filenames: commands.map(cmd => cmd.filename)}));
 }
 
@@ -300,7 +357,7 @@ async function deleteRemote(commands) {
 
 async function deleteFiles(commands) {
     if (!await confirmDialog(`Delete the files ${commands.map(cmd => cmd.filename).join(", ")}?`, "Delete", true)) return;
-    state.selectedLocal.clear();
+    state.selectedDeploy.clear();
     await run(async () => {
         for (const cmd of commands) {
             await api("DELETE", `${state.kind}/files/${encodeURIComponent(cmd.filename)}`);
@@ -366,7 +423,8 @@ function bindEditor() {
 function navigate(kind) {
     if (kind === state.kind) return;
     state.kind = kind;
-    state.selectedLocal.clear();
+    state.selectedDeploy.clear();
+    state.selectedUpdate.clear();
     state.selectedRemote.clear();
     renderNavigation();
     refresh();
@@ -387,15 +445,16 @@ function bindNavigation() {
     $$(".nav-item").forEach(item => item.addEventListener("click", () => navigate(item.dataset.kind)));
     $$("[data-scope]").forEach(tab => tab.addEventListener("click", () => {
         state.scope = tab.dataset.scope;
-        state.localMode = "targeting";
-        state.selectedLocal.clear();
+        state.selectedDeploy.clear();
+        state.selectedUpdate.clear();
         state.selectedRemote.clear();
         renderNavigation();
         refresh();
     }));
     $("#guild-select").addEventListener("change", event => {
         state.guildId = event.target.value;
-        state.selectedLocal.clear();
+        state.selectedDeploy.clear();
+        state.selectedUpdate.clear();
         state.selectedRemote.clear();
         refresh();
     });

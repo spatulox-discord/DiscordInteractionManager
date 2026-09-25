@@ -160,6 +160,15 @@ describe("WebServer API", () => {
         assert.deepEqual((await readCommand("here.json")).id, {[G1]: C2, [G2]: null});
     });
 
+    it("deploys a guild file to every guild still pending in it", async () => {
+        await writeCommand("here.json", {name: "here", type: 1, description: "Here", command_scope: "guild", id: {[G1]: C1, [G2]: null}});
+
+        await json("POST", "/api/commands/deploy", {scope: "all", filenames: ["here.json"]});
+
+        assert.deepEqual(calls.map(call => call.route), [`/applications/123456789012345678/guilds/${G2}/commands`]);
+        assert.deepEqual((await readCommand("here.json")).id, {[G1]: C1, [G2]: C2});
+    });
+
     it("reports the selected files that cannot be deployed", async () => {
         const {body} = await json("POST", "/api/commands/deploy", {scope: "global", filenames: ["missing.json"]});
         assert.deepEqual(body.messages, [{level: "error", message: "missing.json: nothing to deploy"}]);

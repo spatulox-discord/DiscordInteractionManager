@@ -309,7 +309,7 @@ export class WebServer {
     }
 
     /**
-     * Deploys local files to Discord: global files, or guild files to one guild.
+     * Deploys local files to Discord: global files, guild files to one guild, or to every guild still pending in them.
      * With add, deploys guild files that do not target the guild yet, and adds the guild to them.
      */
     private async deploy(context: RouteContext) {
@@ -317,11 +317,12 @@ export class WebServer {
         const body = WebServer.body(context);
         const filenames = WebServer.stringList(body.filenames, "filenames");
         const scope = WebServer.scope(body.scope);
-        if (scope === "all") throw new HttpError(400, "Choose a guild to deploy guild interactions");
+        const add = body.add === true;
+        if (add && scope !== "guild") throw new HttpError(400, "Choose a guild to add guild interactions to");
 
         const guild = scope === "guild" ? await this.guild(body.guild) : null;
-        const listing = body.add === true ? Listing.ADDABLE : Listing.LOCAL;
-        const selected = WebServer.pick(await manager.listFromFile(listing, guild?.id, false), filenames, cmd => cmd.filename!, "nothing to deploy");
+        const target = guild ? guild.id : scope === "all" ? ALL_GUILDS : undefined;
+        const selected = WebServer.pick(await manager.listFromFile(add ? Listing.ADDABLE : Listing.LOCAL, target, false), filenames, cmd => cmd.filename!, "nothing to deploy");
         if (selected.length > 0) await manager.deploy(selected);
     }
 

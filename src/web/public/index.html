@@ -28,6 +28,7 @@
 <div class="page">
 <header class="page-head">
     <h1 id="page-title"></h1>
+    <p id="page-folder" class="muted mono"></p>
 </header>
 
 <main>
@@ -47,10 +48,24 @@
 
         <section class="panel">
             <div class="panel-head">
-                <h2>Local files <span id="local-folder" class="muted mono"></span></h2>
-                <div class="actions" id="local-actions"></div>
+                <div>
+                    <h2>To deploy</h2>
+                    <p id="deploy-hint" class="hint"></p>
+                </div>
+                <div class="actions" id="deploy-actions"></div>
             </div>
-            <div id="local-table" class="table-wrap"></div>
+            <div id="deploy-table" class="table-wrap"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2>To update</h2>
+                    <p id="update-hint" class="hint"></p>
+                </div>
+                <div class="actions" id="update-actions"></div>
+            </div>
+            <div id="update-table" class="table-wrap"></div>
         </section>
 
         <section class="panel">
