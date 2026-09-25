@@ -602,8 +602,9 @@ export class Builder {
         if (!isNumeric(type)) { delete option.min_value; delete option.max_value; }
         if (type !== T.STRING && !isNumeric(type)) { delete option.choices; delete option.autocomplete; }
         if (type !== T.CHANNEL) delete option.channel_types;
-        // Choice values of another type would be invalid
-        if (option.choices) option.choices = option.choices.map(choice => ({...choice, value: type === T.STRING ? String(choice.value) : Number(choice.value)}));
+        // Choice values of another type would be invalid. A text that is no number is emptied, to be filled again
+        const toNumber = value => String(value ?? "").trim() !== "" && Number.isFinite(Number(value)) ? Number(value) : "";
+        if (option.choices) option.choices = option.choices.map(choice => ({...choice, value: type === T.STRING ? String(choice.value ?? "") : toNumber(choice.value)}));
     }
 
     typeFields(option) {
