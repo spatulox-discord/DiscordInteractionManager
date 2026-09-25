@@ -371,11 +371,19 @@ async function deleteRemote(commands) {
 async function deleteFiles(commands) {
     if (!await confirmDialog(`Delete the files ${commands.map(cmd => cmd.filename).join(", ")}?`, "Delete", true)) return;
     state.selectedDeploy.clear();
+    // Each file on its own: an error is logged and the next files are still deleted
     await run(async () => {
+        let deleted = 0;
         for (const cmd of commands) {
-            await api("DELETE", `${state.kind}/files/${encodeURIComponent(cmd.filename)}`);
-            log("info", `${cmd.filename} deleted`);
+            try {
+                await api("DELETE", `${state.kind}/files/${encodeURIComponent(cmd.filename)}`);
+                log("info", `${cmd.filename} deleted`);
+                deleted++;
+            } catch {
+                // Already in the log
+            }
         }
+        if (commands.length > 1) log(deleted === commands.length ? "info" : "warn", `${deleted}/${commands.length} files deleted`);
     });
 }
 
