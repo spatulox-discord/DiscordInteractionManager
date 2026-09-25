@@ -81,9 +81,7 @@ function splitLocalFiles() {
         return {deploy: local.filter(cmd => !cmd.id), update: local.filter(cmd => cmd.id)};
     }
     if (scope === "guild") {
-        // The addable listing also has the files that target the guild without being deployed in it
-        const targeting = new Set(local.map(cmd => cmd.filename));
-        const addable = state.addable.filter(cmd => !targeting.has(cmd.filename)).map(cmd => ({...cmd, addable: true}));
+        const addable = state.addable.map(cmd => ({...cmd, addable: true}));
         return {
             deploy: [...local.filter(cmd => !cmd.id?.[guildId]), ...addable],
             update: local.filter(cmd => cmd.id?.[guildId]),
@@ -289,17 +287,18 @@ async function refresh() {
 
     const guildScope = state.scope === "guild";
     const available = guildScope && state.includeGlobal ? "&available=true" : "";
+    // In a guild, every guild file is read once: the ones that target it, and the others it can be added to.
     // null when the listing failed (the error is in the log)
-    const [local, addable, remote] = await Promise.all([
-        api("GET", `${state.kind}/local?${scopeQuery()}`).catch(() => null),
-        guildScope ? api("GET", `${state.kind}/local?${scopeQuery()}&listing=addable`).catch(() => null) : [],
+    const [files, remote] = await Promise.all([
+        api("GET", `${state.kind}/local?${guildScope ? "scope=all" : scopeQuery()}`).catch(() => null),
         api("GET", `${state.kind}/remote?${scopeQuery()}${available}`).catch(() => null),
     ]);
     if (current !== loading) return; // A newer refresh is running
 
-    state.failed = {local: !local || !addable, remote: !remote};
-    state.local = local ?? [];
-    state.addable = addable ?? [];
+    state.failed = {local: !files, remote: !remote};
+    const targeting = cmd => !guildScope || state.guildId in cmd.id;
+    state.local = (files ?? []).filter(targeting);
+    state.addable = (files ?? []).filter(cmd => !targeting(cmd));
     state.remote = remote ?? [];
     // A failed listing keeps the selection, for the next Refresh
     if (!state.failed.local) {

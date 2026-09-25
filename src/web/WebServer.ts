@@ -289,14 +289,11 @@ export class WebServer {
 
     /**
      * Local files of a scope, with every guild they target for the guild scope.
-     * With listing=addable, the guild files that do not target the guild yet.
      */
     private async listLocal(context: RouteContext) {
         const scope = WebServer.scope(context.query.get("scope"));
         const target = scope === "guild" ? (await this.guild(context.query.get("guild"))).id : scope === "all" ? ALL_GUILDS : undefined;
-        const addable = context.query.get("listing") === "addable";
-        if (addable && scope !== "guild") throw new HttpError(400, "Only guild files can be added to a guild");
-        return WebServer.withDetails(await this.manager(context).listFromFile(addable ? Listing.ADDABLE : Listing.ALL, target, false));
+        return WebServer.withDetails(await this.manager(context).listFromFile(Listing.ALL, target, false));
     }
 
     private async listRemote(context: RouteContext) {
