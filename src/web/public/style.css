@@ -213,6 +213,7 @@ tr.selected { background: var(--info-bg) !important; }
 td.check, th.check { width: 32px; }
 td.wide { min-width: 200px; }
 .empty { padding: 18px 14px; color: var(--muted); }
+.empty.error { color: var(--danger); }
 
 .badge {
     display: inline-block;

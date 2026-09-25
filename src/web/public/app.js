@@ -13,6 +13,7 @@ const state = {
     local: [],
     addable: [], // Guild files that do not target the chosen guild yet
     remote: [],
+    failed: {local: false, remote: false}, // The listing failed: its tables tell it instead of looking empty
     selectedDeploy: new Set(),
     selectedUpdate: new Set(),
     selectedRemote: new Set(),
@@ -190,9 +191,11 @@ function renderTables() {
     // Global interactions listed in a guild cannot be deleted from it
     const remoteSelectable = row => state.scope !== "guild" || row.command_scope === "guild";
 
-    replace($("#deploy-table"), table(localColumns(deployStatus), deploy.map(withKey), state.selectedDeploy, canDeploy));
-    replace($("#update-table"), table(localColumns(updateStatus), update.map(withKey), state.selectedUpdate, () => true));
-    replace($("#remote-table"), table(remoteColumns(), remote, state.selectedRemote, remoteSelectable));
+    const failed = () => h("p", {class: "empty error"}, "Cannot be listed: see the log, then Refresh");
+    const {local: localFailed, remote: remoteFailed} = state.failed;
+    replace($("#deploy-table"), localFailed ? failed() : table(localColumns(deployStatus), deploy.map(withKey), state.selectedDeploy, canDeploy));
+    replace($("#update-table"), localFailed ? failed() : table(localColumns(updateStatus), update.map(withKey), state.selectedUpdate, () => true));
+    replace($("#remote-table"), remoteFailed ? failed() : table(remoteColumns(), remote, state.selectedRemote, remoteSelectable));
     renderActions();
 }
 
@@ -276,6 +279,7 @@ async function refresh() {
         state.local = [];
         state.addable = [];
         state.remote = [];
+        state.failed = {local: false, remote: false};
         renderTables();
         return;
     }
@@ -283,20 +287,25 @@ async function refresh() {
 
     const guildScope = state.scope === "guild";
     const available = guildScope && state.includeGlobal ? "&available=true" : "";
+    // null when the listing failed (the error is in the log)
     const [local, addable, remote] = await Promise.all([
-        api("GET", `${state.kind}/local?${scopeQuery()}`).catch(() => []),
-        guildScope ? api("GET", `${state.kind}/local?${scopeQuery()}&listing=addable`).catch(() => []) : [],
-        api("GET", `${state.kind}/remote?${scopeQuery()}${available}`).catch(() => []),
+        api("GET", `${state.kind}/local?${scopeQuery()}`).catch(() => null),
+        guildScope ? api("GET", `${state.kind}/local?${scopeQuery()}&listing=addable`).catch(() => null) : [],
+        api("GET", `${state.kind}/remote?${scopeQuery()}${available}`).catch(() => null),
     ]);
     if (current !== loading) return; // A newer refresh is running
 
-    state.local = local;
-    state.addable = addable;
-    state.remote = remote;
-    const filenames = [...local, ...addable].map(cmd => cmd.filename);
-    keepExisting(state.selectedDeploy, filenames);
-    keepExisting(state.selectedUpdate, filenames);
-    keepExisting(state.selectedRemote, remote.map(cmd => `${cmd.command_scope}:${cmd.key}`));
+    state.failed = {local: !local || !addable, remote: !remote};
+    state.local = local ?? [];
+    state.addable = addable ?? [];
+    state.remote = remote ?? [];
+    // A failed listing keeps the selection, for the next Refresh
+    if (!state.failed.local) {
+        const filenames = [...state.local, ...state.addable].map(cmd => cmd.filename);
+        keepExisting(state.selectedDeploy, filenames);
+        keepExisting(state.selectedUpdate, filenames);
+    }
+    if (!state.failed.remote) keepExisting(state.selectedRemote, state.remote.map(cmd => `${cmd.command_scope}:${cmd.key}`));
     renderTables();
 }
 
