@@ -20,12 +20,16 @@ let origin: string;
 let url: string;
 let calls: RestCall[];
 let remote: Record<string, unknown[]>;
+let postGate: Promise<void> | null; // Holds the POST requests to Discord until it resolves
 
 function mockRest(manager: CommandManager | ContextMenuManager) {
     const call = (method: string) => async (route: string, options?: { body?: unknown }) => {
         calls.push({method, route, body: options?.body});
         if (method === "get") return remote[route] ?? [];
-        if (method === "post") return {id: C2};
+        if (method === "post") {
+            await postGate;
+            return {id: C2};
+        }
         return {};
     };
     (manager as any).rest = {get: call("get"), post: call("post"), patch: call("patch"), delete: call("delete")};
@@ -60,6 +64,7 @@ beforeEach(async () => {
     delete process.env.DISCORD_BOT_DEV;
     calls = [];
     remote = {};
+    postGate = null;
 
     server = new WebServer({
         token: "token",
@@ -246,6 +251,28 @@ describe("WebServer files", () => {
         assert.equal(scope.status, 409);
         assert.equal(guild.status, 409);
         assert.match(guild.body.error, new RegExp(`Deployed in guild ${G1}`));
+    });
+
+    it("waits for a running deployment before saving, so its ID is kept", async () => {
+        await writeCommand("ping.json", ping);
+        let release!: () => void;
+        postGate = new Promise(resolve => release = resolve);
+
+        const deploying = json("POST", "/api/commands/deploy", {scope: "global", filenames: ["ping.json"]});
+        let saved = false;
+        let saving!: Promise<unknown>;
+        try {
+            while (!calls.some(call => call.method === "post")) await new Promise(resolve => setTimeout(resolve, 1));
+            saving = json("PUT", "/api/commands/files/ping", {overwrite: true, interaction: {...ping, description: "New"}}).then(() => saved = true);
+            await new Promise(resolve => setTimeout(resolve, 20));
+            assert.equal(saved, false);
+        } finally {
+            release(); // Else the server could not close
+        }
+        await Promise.all([deploying, saving]);
+        const file = await readCommand("ping.json");
+        assert.equal(file.id, C2);
+        assert.equal(file.description, "New");
     });
 
     it("deletes a file only when it is not deployed", async () => {

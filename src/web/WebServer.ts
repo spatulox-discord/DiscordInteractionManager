@@ -401,7 +401,11 @@ export class WebServer {
      * Saves an interaction built in the page. The IDs of an existing file are kept:
      * the page cannot change where an interaction is deployed, only which guilds are still pending.
      */
-    private async writeFile(context: RouteContext) {
+    private writeFile(context: RouteContext) {
+        return BaseInteractionManager.fileChanges.run(() => this.writeFileNow(context));
+    }
+
+    private async writeFileNow(context: RouteContext) {
         const manager = this.manager(context);
         const filePath = this.filePath(context);
         const body = WebServer.body(context);
@@ -428,7 +432,11 @@ export class WebServer {
         return {filename: path.basename(filePath), interaction: saved};
     }
 
-    private async deleteFile(context: RouteContext) {
+    private deleteFile(context: RouteContext) {
+        return BaseInteractionManager.fileChanges.run(() => this.deleteFileNow(context));
+    }
+
+    private async deleteFileNow(context: RouteContext) {
         const filePath = this.filePath(context);
         if (!await FileManager.fileExists(filePath)) throw new HttpError(404, `${context.params.filename} does not exist`);
         let cmd: Interaction | null = null;

@@ -9,6 +9,7 @@ import {
 import {Log} from "../../utils/Log";
 import {FileManager} from "../../utils/FileManager";
 import {PathUtils} from "../../utils/PathUtils";
+import {Mutex} from "../../utils/Mutex";
 import {
     Interaction,
     InteractionIntegrationType,
@@ -21,6 +22,12 @@ import {InteractionPayload} from "./InteractionPayload";
 import {InteractionDetails} from "./InteractionDetails";
 
 export abstract class BaseInteractionManager {
+    /**
+     * Deploy, update and delete read the interaction files and write their IDs back: they run one at a time,
+     * with the saves of the web UI, so two of them never write the same file from what it was before the other.
+     */
+    static readonly fileChanges = new Mutex();
+
     public abstract folderPath: string;
     public abstract commandType: number[];
 
@@ -341,7 +348,11 @@ export abstract class BaseInteractionManager {
         return result;
     }
 
-    async deploy(commands: Interaction[]): Promise<void> {
+    deploy(commands: Interaction[]): Promise<void> {
+        return BaseInteractionManager.fileChanges.run(() => this.deployNow(commands));
+    }
+
+    private async deployNow(commands: Interaction[]): Promise<void> {
         Log.print(`Deploying ${commands.length} ${this.folderPath}(s)...`);
         let updatedCount = 0;
         for (const cmd of commands) {
@@ -362,7 +373,11 @@ export abstract class BaseInteractionManager {
         Log.print(`${updatedCount}/${commands.length} deployed`);
     }
 
-    async delete(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
+    delete(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
+        return BaseInteractionManager.fileChanges.run(() => this.deleteNow(commands, guild));
+    }
+
+    private async deleteNow(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         Log.print(`Deleting ${commands.length} ${this.folderPath}(s)...`);
 
         const IDList: string[] = [];
@@ -396,7 +411,11 @@ export abstract class BaseInteractionManager {
         }
     }
 
-    async update(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
+    update(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
+        return BaseInteractionManager.fileChanges.run(() => this.updateNow(commands, guild));
+    }
+
+    private async updateNow(commands: Interaction[], guild: RESTAPIPartialCurrentUserGuild | null): Promise<void> {
         Log.print(`Updating ${commands.length} ${this.folderPath}(s)...`);
         const goneIds: string[] = [];
 
