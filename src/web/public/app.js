@@ -23,6 +23,7 @@ const state = {
 
 const KIND_LABELS = {commands: "slash command", context_menu: "context menu"};
 let editor; // The builder of the editor window
+let savedInEditor = false; // The lists are refreshed when the editor closes, once, if a file was saved
 
 // ---- Log ----
 
@@ -423,6 +424,7 @@ function openEditor(filename) {
     const dialog = $("#editor");
     $("#editor-title").textContent = filename ? `Edit ${filename}` : `New ${KIND_LABELS[state.kind]}`;
     dialog.classList.remove("closing");
+    savedInEditor = false;
     dialog.showModal();
     editor.open(state.kind, filename);
 }
@@ -444,7 +446,7 @@ function bindEditor() {
         if (event.target !== dialog || event.animationName !== "editor-out") return;
         dialog.classList.remove("closing");
         dialog.close();
-        refresh();
+        if (savedInEditor) refresh();
     });
 }
 
@@ -523,7 +525,7 @@ async function start() {
             // A new file is then edited like the others
             $("#editor-title").textContent = `Edit ${filename}`;
             log("info", `${filename} saved: deploy or update it on Discord to apply it`);
-            refresh();
+            savedInEditor = true;
         },
     });
     bindEditor();
